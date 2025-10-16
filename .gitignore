@@ -1,0 +1,4 @@
+/bochs.log
+obj/
+*.img
+*.iso
