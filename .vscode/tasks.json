@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build FOS (Bochs)",
+      "type": "shell",
+      "command": "make -f GNUmakefile bochs",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build FOS (QEMU)",
+      "type": "shell",
+      "command": "make -f GNUmakefile qemu",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

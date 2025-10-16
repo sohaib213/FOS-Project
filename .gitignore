@@ -2,3 +2,6 @@
 obj/
 *.img
 *.iso
+
+*.log
+*.tmp
