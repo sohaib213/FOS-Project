@@ -61,7 +61,11 @@ void* kmalloc(unsigned int size)
 	//TODO: [PROJECT'25.GM#2] KERNEL HEAP - #1 kmalloc
 	//Your code is here
 	//Comment the following line
-	kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+	// kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+	if(size < DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		int* a = alloc_block(size);
+	}
 
 	//TODO: [PROJECT'25.BONUS#3] FAST PAGE ALLOCATOR
 }
