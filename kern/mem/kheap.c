@@ -62,12 +62,73 @@ void* kmalloc(unsigned int size)
 	//Your code is here
 	//Comment the following line
 	// kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+
+	if(size > (KERNEL_HEAP_MAX - kheapPageAllocStart))
+	{
+		panic("The Required Size is greater than heap size");
+	}
+
 	if(size < DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
 		int* a = alloc_block(size);
+	}else
+	{
+
+		unsigned int maxGap = 0, maxGapAddress;
+		unsigned int pagesNeeded = ROUNDUP((uint32)size, PAGE_SIZE);
+		int currentPagesNumber = 0;
+		unsigned int resultAddress = 0;
+		unsigned int startAdressOfLastFreePages = 0;
+		
+
+		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak; currentAddress += PAGE_SIZE)
+		{
+
+			uint32* ptr_table;
+			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, currentAddress, &ptr_table);
+			if (ptr_fi != NULL) {
+				startAdressOfLastFreePages = currentAddress;
+				if(currentPagesNumber == pagesNeeded)
+				{
+					resultAddress = currentAddress;
+					break;
+				}
+				if(currentPagesNumber > maxGap)
+				{
+
+					maxGap = currentPagesNumber;
+					maxGapAddress = currentAddress;
+					currentPagesNumber = 0;
+				}
+			}
+			currentPagesNumber++;
+		}
+		if(resultAddress == 0)
+		{
+
+			if(maxGap >= pagesNeeded)
+			{
+				resultAddress = maxGapAddress;
+			}
+
+			else{
+				if(KERNEL_HEAP_MAX - startAdressOfLastFreePages < size)
+				{
+					panic("The Required Size is greater than heap size");
+				}
+				
+				kheapPageAllocBreak = startAdressOfLastFreePages + size;
+				resultAddress = startAdressOfLastFreePages;
+			}
+		}
+
+		// link result address with pages
+		return (void*)resultAddress;
 	}
 
+
 	//TODO: [PROJECT'25.BONUS#3] FAST PAGE ALLOCATOR
+	return (void*) 22;
 }
 
 //=================================
