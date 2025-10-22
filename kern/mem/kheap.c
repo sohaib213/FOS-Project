@@ -86,7 +86,7 @@ void* kmalloc(unsigned int size)
 		int currentPagesNumber = 0;
 		unsigned int resultAddress = 0;
 		unsigned int startAdressOfLastFreePages = kheapPageAllocStart;
-		
+
 
 		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak; currentAddress += PAGE_SIZE)
 		{
@@ -109,8 +109,6 @@ void* kmalloc(unsigned int size)
 				}
 			}
 			currentPagesNumber++;
-			free(ptr_fi);
-			ptr_fi = NULL;
 		}
 		if(resultAddress == 0)
 		{
@@ -125,7 +123,7 @@ void* kmalloc(unsigned int size)
 				{
 					panic("The Required Size is greater than heap size");
 				}
-				
+
 				kheapPageAllocBreak = startAdressOfLastFreePages + size;
 				resultAddress = startAdressOfLastFreePages;
 			}
