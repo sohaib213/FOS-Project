@@ -63,6 +63,13 @@ void* kmalloc(unsigned int size)
 	//Comment the following line
 	// kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
+	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
+
+	if (!lock_already_held)
+	{
+		acquire_kspinlock(&MemFrameLists.mfllock);
+	}
+
 	if(size > (KERNEL_HEAP_MAX - kheapPageAllocStart))
 	{
 		panic("The Required Size is greater than heap size");
@@ -78,7 +85,7 @@ void* kmalloc(unsigned int size)
 		unsigned int pagesNeeded = ROUNDUP((uint32)size, PAGE_SIZE);
 		int currentPagesNumber = 0;
 		unsigned int resultAddress = 0;
-		unsigned int startAdressOfLastFreePages = 0;
+		unsigned int startAdressOfLastFreePages = kheapPageAllocStart;
 		
 
 		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak; currentAddress += PAGE_SIZE)
@@ -87,7 +94,7 @@ void* kmalloc(unsigned int size)
 			uint32* ptr_table;
 			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, currentAddress, &ptr_table);
 			if (ptr_fi != NULL) {
-				startAdressOfLastFreePages = currentAddress;
+				startAdressOfLastFreePages = currentAddress + PAGE_SIZE;
 				if(currentPagesNumber == pagesNeeded)
 				{
 					resultAddress = currentAddress;
@@ -102,6 +109,8 @@ void* kmalloc(unsigned int size)
 				}
 			}
 			currentPagesNumber++;
+			free(ptr_fi);
+			ptr_fi = NULL;
 		}
 		if(resultAddress == 0)
 		{
@@ -121,8 +130,20 @@ void* kmalloc(unsigned int size)
 				resultAddress = startAdressOfLastFreePages;
 			}
 		}
-
 		// link result address with pages
+		for(uint32 currentAddress = resultAddress; currentAddress < resultAddress + size; currentAddress += PAGE_SIZE)
+		{
+			int ret = alloc_page(ptr_page_directory, currentAddress, PERM_PRESENT | PERM_WRITEABLE, 0);
+			if(ret != 0)
+			{
+				panic("failed to allocate the required programm in memory");
+			}
+		}
+
+		if (!lock_already_held)
+		{
+			release_kspinlock(&MemFrameLists.mfllock);
+		}
 		return (void*)resultAddress;
 	}
 
@@ -150,8 +171,10 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	//TODO: [PROJECT'25.GM#2] KERNEL HEAP - #3 kheap_virtual_address
 	//Your code is here
 	//Comment the following line
-	panic("kheap_virtual_address() is not implemented yet...!!");
+	// panic("kheap_virtual_address() is not implemented yet...!!");
 
+	struct FrameInfo* ptr_fi = to_frame_info(physical_address);
+	return ptr_fi->virtual_address;
 	/*EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED */
 }
 

@@ -216,6 +216,7 @@ struct FrameInfo {
 	uint16 references;
 	struct Env *proc;
 	unsigned char isBuffered;
+	unsigned int virtual_address;
 };
 
 #endif /* !__ASSEMBLER__ */

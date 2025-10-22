@@ -149,6 +149,8 @@ inline int alloc_page(uint32* directory, uint32 va, uint32 perms, bool set_to_ze
 		if (set_to_zero) {
 			memset((void*)va, 0, PAGE_SIZE);
 		}
+		ptr_fi->virtual_address = va;
+
 		return 0;
 	}
 }
