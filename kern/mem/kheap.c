@@ -171,8 +171,11 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	//Comment the following line
 	// panic("kheap_virtual_address() is not implemented yet...!!");
 
-	struct FrameInfo* ptr_fi = to_frame_info(physical_address);
-	return ptr_fi->virtual_address;
+	unsigned int physical_address_without_offset = physical_address & 0xFFFFF000;
+	unsigned int offset = physical_address & 0X00000FFF;
+
+	struct FrameInfo* ptr_fi = to_frame_info(physical_address_without_offset);
+	return ptr_fi->virtual_address | offset;
 	/*EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED */
 }
 
