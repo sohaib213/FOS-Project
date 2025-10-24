@@ -5,3 +5,4 @@ obj/
 
 *.log
 *.tmp
+.settings/language.settings.xml

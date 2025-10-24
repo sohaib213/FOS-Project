@@ -7,6 +7,7 @@
 #include <kern/mem/memory_manager.h>
 #include "../conc/kspinlock.h"
 
+uint32 programmsSizes[KHP_PAGES_NUMBER];
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -29,6 +30,8 @@ void kheap_init()
 	}
 	//==================================================================================
 	//==================================================================================
+	memset(programmsSizes, 0, KHP_PAGES_NUMBER * sizeof(uint32));
+
 }
 
 //==============================================
@@ -72,7 +75,7 @@ void* kmalloc(unsigned int size)
 
 	if(size > (KERNEL_HEAP_MAX - kheapPageAllocStart))
 	{
-		panic("The Required Size is greater than heap size");
+		return NULL;
 	}
 
 	if(size < DYN_ALLOC_MAX_BLOCK_SIZE)
@@ -82,7 +85,7 @@ void* kmalloc(unsigned int size)
 	{
 
 		unsigned int maxGap = 0, maxGapAddress;
-		unsigned int pagesNeeded = ROUNDUP((uint32)size, PAGE_SIZE);
+		unsigned int pagesNeeded = ROUNDUP((uint32)size, PAGE_SIZE) / PAGE_SIZE;
 		int currentPagesNumber = 0;
 		unsigned int resultAddress = 0;
 		unsigned int startAdressOfLastFreePages = kheapPageAllocStart;
@@ -121,7 +124,7 @@ void* kmalloc(unsigned int size)
 			else{
 				if(KERNEL_HEAP_MAX - startAdressOfLastFreePages < size)
 				{
-					panic("The Required Size is greater than heap size");
+					return NULL;
 				}
 
 				kheapPageAllocBreak = startAdressOfLastFreePages + size;
@@ -134,7 +137,7 @@ void* kmalloc(unsigned int size)
 			int ret = alloc_page(ptr_page_directory, currentAddress, PERM_PRESENT | PERM_WRITEABLE, 0);
 			if(ret != 0)
 			{
-				panic("failed to allocate the required programm in memory");
+				return NULL;
 			}
 		}
 
@@ -142,6 +145,7 @@ void* kmalloc(unsigned int size)
 		{
 			release_kspinlock(&MemFrameLists.mfllock);
 		}
+		programmsSizes[(resultAddress - KERNEL_HEAP_START) / PAGE_SIZE] = size;
 		return (void*)resultAddress;
 	}
 

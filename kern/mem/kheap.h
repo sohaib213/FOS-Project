@@ -17,6 +17,9 @@
 #define KHP_PLACE_WORSTFIT 	0x4
 #define KHP_PLACE_CUSTOMFIT 0x5
 
+// my variables
+#define KHP_PAGES_NUMBER ((KERNEL_HEAP_MAX - KERNEL_HEAP_START) / PAGE_SIZE)
+
 //TODO: [PROJECT'25.GM#2] KERNEL HEAP - #0 Page Alloc Limits [GIVEN]
 uint32 kheapPageAllocStart ;
 uint32 kheapPageAllocBreak ;
