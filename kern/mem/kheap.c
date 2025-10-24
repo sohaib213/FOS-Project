@@ -195,7 +195,7 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//Comment the following line
 	// panic("kheap_physical_address() is not implemented yet...!!");
 	uint32* ptr_table ;
-	uint32 ret =  get_page_table(ptr_page_directory, virtual_address, ptr_table) ;
+	uint32 ret =  get_page_table(ptr_page_directory, virtual_address, &ptr_table) ;
 	if((*ptr_table) != 0)
 	{
 		uint32 index_page_table = PTX(virtual_address);
@@ -230,5 +230,81 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//TODO: [PROJECT'25.BONUS#2] KERNEL REALLOC - krealloc
 	//Your code is here
 	//Comment the following line
-	panic("krealloc() is not implemented yet...!!");
+	// panic("krealloc() is not implemented yet...!!");
+	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
+
+	if (!lock_already_held)
+	{
+		acquire_kspinlock(&MemFrameLists.mfllock);
+	}
+	if(virtual_address == NULL)
+	{
+		return (void *)kmalloc(new_size);
+	}
+	
+	if(new_size == 0)
+	{
+		kfree(virtual_address);
+		return virtual_address;
+	}
+
+	if(new_size < DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		// handle blocks
+	}
+
+	uint32 oldSize = programmsSizes[(uint32)virtual_address];
+	if(oldSize == 0)
+	{
+		panic("There is no old process to reallocate");
+	}
+	if(new_size == oldSize)
+	{
+		return virtual_address;
+	}
+
+	if(new_size > oldSize)
+	{
+		// alloc more frames
+		uint32 pagesNeeded = ROUNDUP((new_size - oldSize), PAGE_SIZE) / PAGE_SIZE;
+		uint32 pagesUpoveBreak = 0;
+		uint32 addressOfTheStartFreePagesBelow = ROUNDDOWN((uint32)virtual_address, PAGE_SIZE);
+		uint32 addressOfTheEndFreePagesAbove = addressOfTheStartFreePagesBelow;
+
+		while(1)
+		{
+			if(addressOfTheStartFreePagesBelow == KERNEL_HEAP_START)
+				break;
+			addressOfTheStartFreePagesBelow -= PAGE_SIZE;
+			uint32* ptr_table;
+			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, addressOfTheStartFreePagesBelow, &ptr_table);
+			if (ptr_fi != NULL) {
+				pagesNeeded--;
+				if(pagesNeeded == 0)
+				{
+					break;
+				}
+			}
+			else{
+				addressOfTheStartFreePagesBelow += PAGE_SIZE;
+				break;
+			}
+		}
+
+		if(pagesNeeded != 0)
+		{
+
+		}
+
+	}
+
+	// free frames
+
+
+	if (!lock_already_held)
+	{
+		release_kspinlock(&MemFrameLists.mfllock);
+	}
+
+	return (void *) 22;
 }
