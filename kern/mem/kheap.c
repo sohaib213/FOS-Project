@@ -269,16 +269,14 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		uint32 pagesNeeded = ROUNDUP((new_size - oldSize), PAGE_SIZE) / PAGE_SIZE;
 		uint32 pagesUpoveBreak = 0;
 		uint32 addressOfTheStartFreePagesBelow = ROUNDDOWN((uint32)virtual_address, PAGE_SIZE);
-		uint32 addressOfTheEndFreePagesAbove = addressOfTheStartFreePagesBelow;
+		uint32 addressOfTheEndFreePagesAbove = addressOfTheStartFreePagesBelow + oldSize;
 
-		while(1)
+		while(addressOfTheStartFreePagesBelow > KERNEL_HEAP_START)
 		{
-			if(addressOfTheStartFreePagesBelow == KERNEL_HEAP_START)
-				break;
 			addressOfTheStartFreePagesBelow -= PAGE_SIZE;
 			uint32* ptr_table;
 			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, addressOfTheStartFreePagesBelow, &ptr_table);
-			if (ptr_fi != NULL) {
+			if (ptr_fi == NULL) {
 				pagesNeeded--;
 				if(pagesNeeded == 0)
 				{
@@ -290,12 +288,50 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				break;
 			}
 		}
-
+		bool reachedToBreak = 0;
 		if(pagesNeeded != 0)
 		{
-
+			while(1)
+			{
+				if(addressOfTheEndFreePagesAbove == kheapPageAllocBreak)
+				{
+					reachedToBreak = 1;
+					break;
+				}
+				
+				uint32* ptr_table;
+				struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, addressOfTheEndFreePagesAbove, &ptr_table);
+				if (ptr_fi == NULL) {
+					pagesNeeded--;
+					addressOfTheEndFreePagesAbove += PAGE_SIZE;
+					if(pagesNeeded == 0)
+					{
+						break;
+					}
+				}
+				else{
+					break;
+				}
+			}
+		}
+		if(pagesNeeded != 0 && reachedToBreak)
+		{
+			uint32 pagesBetweenBreakAndHeapMax = (KERNEL_HEAP_MAX - kheapPageAllocBreak) / PAGE_SIZE;
+			if(pagesBetweenBreakAndHeapMax >= pagesNeeded)
+			{
+				kheapPageAllocBreak += pagesNeeded * PAGE_SIZE;
+				addressOfTheEndFreePagesAbove = kheapPageAllocBreak;
+				pagesNeeded = 0;
+			}
 		}
 
+		if(pagesNeeded == 0)
+		{
+			//allocate frames
+		}else{
+			// free linked frames
+			return kmalloc(new_size);
+		}
 	}
 
 	// free frames
