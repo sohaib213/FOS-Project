@@ -67,8 +67,13 @@ __inline__ uint32 get_block_size(void *va)
 	//TODO: [PROJECT'25.GM#1] DYNAMIC ALLOCATOR - #2 get_block_size
 	//Your code is here
 	//Comment the following line
-	panic("get_block_size() Not implemented yet");
+	//panic("get_block_size() Not implemented yet");
 	
+	uint32 v_add = (uint32) va;
+	unsigned int index = (ROUNDDOWN(v_add,PAGE_SIZE) - dynAllocStart )/ PAGE_SIZE;
+	uint32 b_size = pageBlockInfoArr[index].block_size;
+
+	return b_size;
 }
 
 //===========================
