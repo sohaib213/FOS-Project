@@ -43,7 +43,19 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 daEnd)
 	//TODO: [PROJECT'25.GM#1] DYNAMIC ALLOCATOR - #1 initialize_dynamic_allocator
 	//Your code is here
 	//Comment the following line
-	panic("initialize_dynamic_allocator() Not implemented yet");
+	//panic("initialize_dynamic_allocator() Not implemented yet");
+	dynAllocStart = daStart;
+	dynAllocEnd = daEnd;
+	LIST_INIT(&freePagesList);
+	for(int i = 0; i < 9; ++i){
+		LIST_INIT(&freeBlockLists[i]);
+	}
+	for(int i = 0; i < 8192; ++i){
+		pageBlockInfoArr[i].block_size = 0;
+		pageBlockInfoArr[i].num_of_free_blocks = 0;
+		pageBlockInfoArr[i].prev_next_info.le_next = NULL;
+		pageBlockInfoArr[i].prev_next_info.le_prev = NULL;
+	}	
 
 }
 
@@ -56,6 +68,7 @@ __inline__ uint32 get_block_size(void *va)
 	//Your code is here
 	//Comment the following line
 	panic("get_block_size() Not implemented yet");
+	
 }
 
 //===========================
