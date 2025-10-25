@@ -61,8 +61,6 @@ void return_page(void* va)
 //===================================
 void* kmalloc(unsigned int size)
 {
-	//TODO: [PROJECT'25.GM#2] KERNEL HEAP - #1 kmalloc
-	//Your code is here
 	//Comment the following line
 	// kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
@@ -90,14 +88,12 @@ void* kmalloc(unsigned int size)
 		unsigned int resultAddress = 0;
 		unsigned int startAdressOfLastFreePages = kheapPageAllocStart;
 
-
-		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak; currentAddress += PAGE_SIZE)
+		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak;)
 		{
-
 			uint32* ptr_table;
 			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, currentAddress, &ptr_table);
 			if (ptr_fi != NULL) {
-				startAdressOfLastFreePages = currentAddress + PAGE_SIZE;
+				startAdressOfLastFreePages = currentAddress + ROUNDUP(programmsSizes[(currentAddress - KERNEL_HEAP_START) / PAGE_SIZE], PAGE_SIZE);
 				if(currentPagesNumber == pagesNeeded)
 				{
 					resultAddress = currentAddress;
@@ -110,8 +106,13 @@ void* kmalloc(unsigned int size)
 					maxGapAddress = currentAddress;
 					currentPagesNumber = 0;
 				}
+				currentAddress += ROUNDUP(programmsSizes[(currentAddress - KERNEL_HEAP_START) / PAGE_SIZE], PAGE_SIZE);
 			}
-			currentPagesNumber++;
+			else
+			{
+				currentPagesNumber++;
+				currentAddress += PAGE_SIZE;
+			}
 		}
 		if(resultAddress == 0)
 		{
@@ -120,25 +121,21 @@ void* kmalloc(unsigned int size)
 			{
 				resultAddress = maxGapAddress;
 			}
-
 			else{
 				if(KERNEL_HEAP_MAX - startAdressOfLastFreePages < size)
 				{
 					return NULL;
 				}
 
-				kheapPageAllocBreak = startAdressOfLastFreePages + size;
+				kheapPageAllocBreak = startAdressOfLastFreePages + ROUNDUP(size, PAGE_SIZE);
 				resultAddress = startAdressOfLastFreePages;
 			}
 		}
 		// link result address with pages
-		for(uint32 currentAddress = resultAddress; currentAddress < resultAddress + size; currentAddress += PAGE_SIZE)
+		bool a = allocFrames(resultAddress, resultAddress + ROUNDUP(size, PAGE_SIZE));
+		if(!a)
 		{
-			int ret = alloc_page(ptr_page_directory, currentAddress, PERM_PRESENT | PERM_WRITEABLE, 0);
-			if(ret != 0)
-			{
-				return NULL;
-			}
+			return NULL;
 		}
 
 		if (!lock_already_held)
@@ -150,8 +147,8 @@ void* kmalloc(unsigned int size)
 	}
 
 
+	return NULL;
 	//TODO: [PROJECT'25.BONUS#3] FAST PAGE ALLOCATOR
-	return (void*) 22;
 }
 
 //=================================
@@ -253,7 +250,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		// handle blocks
 	}
 
-	uint32 oldSize = programmsSizes[(uint32)virtual_address];
+	uint32 oldSize = programmsSizes[((uint32) - KERNEL_HEAP_START) / PAGE_SIZE];
 	if(oldSize == 0)
 	{
 		panic("There is no old process to reallocate");
@@ -265,13 +262,14 @@ void *krealloc(void *virtual_address, uint32 new_size)
 
 	if(new_size > oldSize)
 	{
+		oldSize = ROUNDUP(oldSize, PAGE_SIZE);
 		// alloc more frames
 		uint32 pagesNeeded = ROUNDUP((new_size - oldSize), PAGE_SIZE) / PAGE_SIZE;
 		uint32 pagesUpoveBreak = 0;
 		uint32 addressOfTheStartFreePagesBelow = ROUNDDOWN((uint32)virtual_address, PAGE_SIZE);
 		uint32 addressOfTheEndFreePagesAbove = addressOfTheStartFreePagesBelow + oldSize;
 
-		while(addressOfTheStartFreePagesBelow > KERNEL_HEAP_START)
+		while(addressOfTheStartFreePagesBelow > kheapPageAllocStart)
 		{
 			addressOfTheStartFreePagesBelow -= PAGE_SIZE;
 			uint32* ptr_table;
@@ -327,9 +325,20 @@ void *krealloc(void *virtual_address, uint32 new_size)
 
 		if(pagesNeeded == 0)
 		{
-			//allocate frames
+			bool a = allocFrames(addressOfTheStartFreePagesBelow, ROUNDDOWN((uint32)virtual_address, PAGE_SIZE));
+			if(!a)
+			{
+				return NULL;
+			}
+			a = allocFrames(ROUNDDOWN((uint32)virtual_address, PAGE_SIZE) + oldSize, addressOfTheEndFreePagesAbove);
+			if(!a)
+			{
+				//free upove linked frames
+				return NULL;
+			}
 		}else{
-			// free linked frames
+			// free old linked frames
+			// will replace the prgramm in another valid place
 			return kmalloc(new_size);
 		}
 	}
@@ -342,5 +351,18 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		release_kspinlock(&MemFrameLists.mfllock);
 	}
 
-	return (void *) 22;
+	return NULL;
+}
+
+bool allocFrames(uint32 start, uint32 end){
+	for(uint32 currentAddress = start; currentAddress < end; currentAddress += PAGE_SIZE)
+	{
+		int ret = alloc_page(ptr_page_directory, currentAddress, PERM_PRESENT | PERM_WRITEABLE, 0);
+		if(ret != 0)
+		{
+			// free recent allocated frames
+			return 0;
+		}
+	}
+	return 1;
 }
