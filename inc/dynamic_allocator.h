@@ -54,4 +54,8 @@ __inline__ uint32 get_block_size(void *va);
 /*2025*/ //BONUS FUNCTIONS
 void *realloc_block(void* va, uint32 new_size);
 
+/*2025*/ //HELPER FUNCTIONS FOR ME
+uint32 get_pageInfoArr_index(void* va);
+struct PageInfoElement* get_pageInfoArr_element_ptr(void* va);
+
 #endif
