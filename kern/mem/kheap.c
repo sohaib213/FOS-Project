@@ -7,7 +7,7 @@
 #include <kern/mem/memory_manager.h>
 #include "../conc/kspinlock.h"
 
-uint32 programmsSizes[KHP_PAGES_NUMBER];
+uint32 programmsSizes[KHP_PAGES_AREA_NUMBER];
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -30,7 +30,7 @@ void kheap_init()
 	}
 	//==================================================================================
 	//==================================================================================
-	memset(programmsSizes, 0, KHP_PAGES_NUMBER * sizeof(uint32));
+	memset(programmsSizes, 0, KHP_PAGES_AREA_NUMBER * sizeof(uint32));
 
 }
 
@@ -88,12 +88,14 @@ void* kmalloc(unsigned int size)
 		unsigned int resultAddress = 0;
 		unsigned int startAdressOfLastFreePages = kheapPageAllocStart;
 
+		int i = 0;
 		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak;)
 		{
+			i++;
 			uint32* ptr_table;
 			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, currentAddress, &ptr_table);
 			if (ptr_fi != NULL) {
-				startAdressOfLastFreePages = currentAddress + ROUNDUP(programmsSizes[(currentAddress - KERNEL_HEAP_START) / PAGE_SIZE], PAGE_SIZE);
+				startAdressOfLastFreePages = currentAddress + programmsSizes[(currentAddress - kheapPageAllocStart) / PAGE_SIZE];
 				if(currentPagesNumber == pagesNeeded)
 				{
 					resultAddress = currentAddress;
@@ -106,7 +108,7 @@ void* kmalloc(unsigned int size)
 					maxGapAddress = currentAddress;
 					currentPagesNumber = 0;
 				}
-				currentAddress += ROUNDUP(programmsSizes[(currentAddress - KERNEL_HEAP_START) / PAGE_SIZE], PAGE_SIZE);
+				currentAddress += programmsSizes[(currentAddress - kheapPageAllocStart) / PAGE_SIZE];
 			}
 			else
 			{
@@ -114,6 +116,7 @@ void* kmalloc(unsigned int size)
 				currentAddress += PAGE_SIZE;
 			}
 		}
+		cprintf("Iterations = %d\n", i);
 		if(resultAddress == 0)
 		{
 
@@ -142,11 +145,14 @@ void* kmalloc(unsigned int size)
 		{
 			release_kspinlock(&MemFrameLists.mfllock);
 		}
-		programmsSizes[(resultAddress - KERNEL_HEAP_START) / PAGE_SIZE] = size;
+		programmsSizes[(resultAddress - kheapPageAllocStart) / PAGE_SIZE] = ROUNDUP(size, PAGE_SIZE);
 		return (void*)resultAddress;
 	}
 
-
+	if (!lock_already_held)
+	{
+		release_kspinlock(&MemFrameLists.mfllock);
+	}
 	return NULL;
 	//TODO: [PROJECT'25.BONUS#3] FAST PAGE ALLOCATOR
 }
@@ -250,7 +256,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		// handle blocks
 	}
 
-	uint32 oldSize = programmsSizes[((uint32) - KERNEL_HEAP_START) / PAGE_SIZE];
+	uint32 oldSize = programmsSizes[((uint32) - kheapPageAllocStart) / PAGE_SIZE];
 	if(oldSize == 0)
 	{
 		panic("There is no old process to reallocate");
