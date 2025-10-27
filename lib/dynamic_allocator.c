@@ -47,7 +47,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 daEnd)
 	dynAllocStart = daStart;
 	dynAllocEnd = daEnd;
 	LIST_INIT(&freePagesList);
-	for(int i = 0; i < 9; ++i){
+	for(int i = 0; i < LOG; ++i){
 		LIST_INIT(&freeBlockLists[i]);
 	}
 	for(int i = 0; i < 8192; ++i){
@@ -55,7 +55,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 daEnd)
 		pageBlockInfoArr[i].num_of_free_blocks = 0;
 		pageBlockInfoArr[i].prev_next_info.le_next = NULL;
 		pageBlockInfoArr[i].prev_next_info.le_prev = NULL;
-	}	
+	}
 
 }
 
@@ -68,12 +68,24 @@ __inline__ uint32 get_block_size(void *va)
 	//Your code is here
 	//Comment the following line
 	//panic("get_block_size() Not implemented yet");
-	
+
 	uint32 v_add = (uint32) va;
 	unsigned int index = (ROUNDDOWN(v_add,PAGE_SIZE) - dynAllocStart )/ PAGE_SIZE;
 	uint32 b_size = pageBlockInfoArr[index].block_size;
 
 	return b_size;
+}
+
+uint32 get_pageInfoArr_index(void* va){
+	uint32 v_add = (uint32) va;
+	unsigned int index = (ROUNDDOWN(v_add,PAGE_SIZE) - dynAllocStart )/ PAGE_SIZE;
+	return index;
+}
+
+struct PageInfoElement* get_pageInfoArr_element_ptr(void* va){
+	uint32 v_add = (uint32) va;
+	unsigned int index = (ROUNDDOWN(v_add,PAGE_SIZE) - dynAllocStart )/ PAGE_SIZE;
+	return &pageBlockInfoArr[index];
 }
 
 //===========================
@@ -91,8 +103,81 @@ void *alloc_block(uint32 size)
 	//==================================================================================
 	//TODO: [PROJECT'25.GM#1] DYNAMIC ALLOCATOR - #3 alloc_block
 	//Your code is here
+
+	// RETURN NULL IF SIZE==0
+	if(size==0)return NULL;
+
+	// GET THE NEARST SIZE OF 2
+	uint32 nearst_size=ROUNDUP(size,2);
+	uint32 index_of_nearst_size=log2(nearst_size)-LOG2_MIN_SIZE; // TO GET THE BOWER OF 2 AND MINUS 3 FROM IT TO GET THE BASE INDEX
+	uint32 numberOfFreeBlocks=LIST_SIZE(&freeBlockLists[index_of_nearst_size]);
+	uint32 numberOfFreePages=LIST_SIZE(&freePagesList);
+	struct BlockElement* needed_block=NULL;
+
+	// CASE 1
+	if(numberOfFreeBlocks>0){
+		// GET THE BLOCK AND SAVE IT THEN REMOVE IT FROM THE FREE BLOCK LIST
+		needed_block=LIST_LAST(&freeBlockLists[index_of_nearst_size]); //SAVE THE LAST ELEMENT IN PTR
+		LIST_REMOVE(&freeBlockLists[index_of_nearst_size],needed_block);
+
+		// FIRST WAY USING THE INDEX (UPDATE pageBlockInfoArr)
+		//uint32 pageInfoArr_index=get_pageInfoArr_index((void*)needed_block);
+		//pageBlockInfoArr[pageInfoArr_index].num_of_free_blocks=pageBlockInfoArr[pageInfoArr_index].num_of_free_blocks-1;
+
+		//SECOND WAY USING THE PTR  (UPDATE pageBlockInfoArr)
+		struct PageInfoElement* pageInfoElement=get_pageInfoArr_element_ptr((void*)needed_block);
+		pageInfoElement->num_of_free_blocks--;
+
+
+		return (void*)needed_block;
+
+	}
+
+	// CASE 2
+	else if (numberOfFreeBlocks==0){
+		// TAKE FREE PAGE FROM (FREE PAGE LIST)
+		struct PageInfoElement* new_free_page=LIST_LAST(&freePagesList);
+		LIST_REMOVE(&freePagesList,new_free_page);
+		// GET THE VA OF THE TAKEN FREE PAGE IN THE VM
+		uint32 VA=to_page_va(new_free_page);
+		void* ptr=(void*)VA;
+		int ret=get_page(ptr); // RESERVE PAGE IN TEH PHYSICAL MEM
+		// CREATE BLOCKS IN THE FREE BLOCK LIST WHEN (GET PAGE SUCCESS , RET==0)
+		if(ret==0){
+			for(int i=0;i<PAGE_SIZE/nearst_size;i++){
+				struct BlockElement* created_block = (struct BlockElement*)((uint32*)((uint8*)VA + (i * nearst_size)));// ADD THE OFFSET THAT REPRESTNT THE BLOCK SIZE OR NEARST_SIZE ON THE PAGE
+				LIST_INSERT_TAIL(&freeBlockLists[index_of_nearst_size],created_block);
+
+			}
+		}else {
+			panic("CAN'T GET_PAGE OR ALLOC_PAGE IN ALLOC_BLOCK FUNCTION");
+		}
+		// UPDATE THE CORRESPONDING PageBlockInfoArr ELEMENT
+		struct PageInfoElement* pageInfoElement=get_pageInfoArr_element_ptr((void*)VA);
+		pageInfoElement->block_size=nearst_size;
+		pageInfoElement->num_of_free_blocks=(PAGE_SIZE/nearst_size)-1; // -1 for taken block
+
+		// GET THE BLOCK AND RETURN IT
+		needed_block=LIST_LAST(&freeBlockLists[index_of_nearst_size]);
+		LIST_REMOVE(&freeBlockLists[index_of_nearst_size],needed_block);
+
+		return (void*)needed_block;
+
+	}
+	// CASE 3
+	else if(numberOfFreePages==0){
+		if(nearst_size<=DYN_ALLOC_MAX_BLOCK_SIZE/2){
+			needed_block=alloc_block(nearst_size*2);
+		}
+		else {
+			panic("no free blocks and no free pages ");
+		}
+		return (void*)needed_block;
+	}
+	return (void*)needed_block;
+
 	//Comment the following line
-	panic("alloc_block() Not implemented yet");
+	//panic("alloc_block() Not implemented yet");
 
 	//TODO: [PROJECT'25.BONUS#1] DYNAMIC ALLOCATOR - block if no free block
 }
