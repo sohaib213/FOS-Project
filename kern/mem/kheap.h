@@ -6,6 +6,7 @@
 #endif
 
 #include <inc/types.h>
+#include <inc/queue.h>
 
 
 /*2017*/
@@ -16,9 +17,8 @@
 #define KHP_PLACE_NEXTFIT 	0x3
 #define KHP_PLACE_WORSTFIT 	0x4
 #define KHP_PLACE_CUSTOMFIT 0x5
+#define KHP_PAGES_AREA_NUMBER  (KERNEL_HEAP_MAX - (KERNEL_HEAP_START + DYN_ALLOC_MAX_SIZE + PAGE_SIZE)) / PAGE_SIZE
 
-// my variables
-#define KHP_PAGES_NUMBER ((KERNEL_HEAP_MAX - KERNEL_HEAP_START) / PAGE_SIZE)
 
 //TODO: [PROJECT'25.GM#2] KERNEL HEAP - #0 Page Alloc Limits [GIVEN]
 uint32 kheapPageAllocStart ;
@@ -38,10 +38,20 @@ void *krealloc(void *virtual_address, unsigned int new_size);
 
 unsigned int kheap_virtual_address(unsigned int physical_address);
 unsigned int kheap_physical_address(unsigned int virtual_address);
-
-bool allocFrames(uint32 start, uint32 end);
-
 int numOfKheapVACalls ;
+// my work
+bool allocFrames(uint32 start, uint32 end);
+uint32 getProccessSize(struct ProcessNode* node);
+
+struct ProcessNode
+{
+	LIST_ENTRY(ProcessNode) prev_next_info;	/* linked list links */
+	bool isEmpty;
+	uint32 startVirtualAddress;
+};
+LIST_HEAD(ProcessNode_List, ProcessNode);
+struct ProcessNode_List processes ;
+
 
 
 #endif // FOS_KERN_KHEAP_H_

@@ -7,7 +7,6 @@
 #include <kern/mem/memory_manager.h>
 #include "../conc/kspinlock.h"
 
-uint32 programmsSizes[KHP_PAGES_NUMBER];
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -27,10 +26,12 @@ void kheap_init()
 		set_kheap_strategy(KHP_PLACE_CUSTOMFIT);
 		kheapPageAllocStart = dynAllocEnd + PAGE_SIZE;
 		kheapPageAllocBreak = kheapPageAllocStart;
+		// my work
+		LIST_INIT(&processes);
 	}
 	//==================================================================================
 	//==================================================================================
-	memset(programmsSizes, 0, KHP_PAGES_NUMBER * sizeof(uint32));
+	// memset(programmsSizes, 0, KHP_PAGES_NUMBER * sizeof(uint32));
 
 }
 
@@ -52,6 +53,8 @@ void return_page(void* va)
 {
 	unmap_frame(ptr_page_directory, ROUNDDOWN((uint32)va, PAGE_SIZE));
 }
+
+struct ProcessNode *va_processNode[KHP_PAGES_AREA_NUMBER];
 
 //==================================================================================//
 //============================ REQUIRED FUNCTIONS ==================================//
@@ -79,76 +82,95 @@ void* kmalloc(unsigned int size)
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
 		int* a = alloc_block(size);
-	}else
+	}
+	else
 	{
 
-		unsigned int maxGap = 0, maxGapAddress;
-		unsigned int pagesNeeded = ROUNDUP((uint32)size, PAGE_SIZE) / PAGE_SIZE;
-		int currentPagesNumber = 0;
-		unsigned int resultAddress = 0;
-		unsigned int startAdressOfLastFreePages = kheapPageAllocStart;
-
-		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak;)
+		struct ProcessNode *element, *maxSizeNode;
+		LIST_FOREACH(element, &(processes))
 		{
-			uint32* ptr_table;
-			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, currentAddress, &ptr_table);
-			if (ptr_fi != NULL) {
-				startAdressOfLastFreePages = currentAddress + ROUNDUP(programmsSizes[(currentAddress - KERNEL_HEAP_START) / PAGE_SIZE], PAGE_SIZE);
-				if(currentPagesNumber == pagesNeeded)
-				{
-					resultAddress = currentAddress;
-					break;
-				}
-				if(currentPagesNumber > maxGap)
-				{
-
-					maxGap = currentPagesNumber;
-					maxGapAddress = currentAddress;
-					currentPagesNumber = 0;
-				}
-				currentAddress += ROUNDUP(programmsSizes[(currentAddress - KERNEL_HEAP_START) / PAGE_SIZE], PAGE_SIZE);
-			}
-			else
+			if(element->isEmpty)
 			{
-				currentPagesNumber++;
-				currentAddress += PAGE_SIZE;
-			}
-		}
-		if(resultAddress == 0)
-		{
-
-			if(maxGap >= pagesNeeded)
-			{
-				resultAddress = maxGapAddress;
-			}
-			else{
-				if(KERNEL_HEAP_MAX - startAdressOfLastFreePages < size)
+				uint32 nodeSize = getProccessSize(element);
+				if(nodeSize == size)
 				{
-					return NULL;
+					// CUSTOMFIT FOUND
 				}
-
-				kheapPageAllocBreak = startAdressOfLastFreePages + ROUNDUP(size, PAGE_SIZE);
-				resultAddress = startAdressOfLastFreePages;
+				if((maxSizeNode != NULL && nodeSize > getProccessSize(maxSizeNode)) || (maxSizeNode == NULL))
+				{
+					maxSizeNode = element;
+				}
 			}
 		}
-		// link result address with pages
-		bool a = allocFrames(resultAddress, resultAddress + ROUNDUP(size, PAGE_SIZE));
-		if(!a)
-		{
-			return NULL;
-		}
 
-		if (!lock_already_held)
-		{
-			release_kspinlock(&MemFrameLists.mfllock);
-		}
-		programmsSizes[(resultAddress - KERNEL_HEAP_START) / PAGE_SIZE] = size;
-		return (void*)resultAddress;
-	}
+
+	// 	unsigned int maxGap = 0, maxGapAddress;
+	// 	unsigned int pagesNeeded = ROUNDUP((uint32)size, PAGE_SIZE) / PAGE_SIZE;
+	// 	int currentPagesNumber = 0;
+	// 	unsigned int resultAddress = 0;
+	// 	unsigned int startAdressOfLastFreePages = kheapPageAllocStart;
+	// 	for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak;)
+	// 	{
+	// 		uint32* ptr_table;
+	// 		struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, currentAddress, &ptr_table);
+	// 		if (ptr_fi != NULL) {
+	// 			startAdressOfLastFreePages = currentAddress + ROUNDUP(programmsSizes[(currentAddress - KERNEL_HEAP_START) / PAGE_SIZE], PAGE_SIZE);
+	// 			if(currentPagesNumber == pagesNeeded)
+	// 			{
+	// 				resultAddress = currentAddress;
+	// 				break;
+	// 			}
+	// 			if(currentPagesNumber > maxGap)
+	// 			{
+
+	// 				maxGap = currentPagesNumber;
+	// 				maxGapAddress = currentAddress;
+	// 				currentPagesNumber = 0;
+	// 			}
+	// 			currentAddress += ROUNDUP(programmsSizes[(currentAddress - KERNEL_HEAP_START) / PAGE_SIZE], PAGE_SIZE);
+	// 		}
+	// 		else
+	// 		{
+	// 			currentPagesNumber++;
+	// 			currentAddress += PAGE_SIZE;
+	// 		}
+	// 	}
+	// 	if(resultAddress == 0)
+	// 	{
+
+	// 		if(maxGap >= pagesNeeded)
+	// 		{
+	// 			resultAddress = maxGapAddress;
+	// 		}
+	// 		else{
+	// 			if(KERNEL_HEAP_MAX - startAdressOfLastFreePages < size)
+	// 			{
+	// 				return NULL;
+	// 			}
+
+	// 			kheapPageAllocBreak = startAdressOfLastFreePages + ROUNDUP(size, PAGE_SIZE);
+	// 			resultAddress = startAdressOfLastFreePages;
+	// 		}
+	// 	}
+	// 	// link result address with pages
+	// 	bool a = allocFrames(resultAddress, resultAddress + ROUNDUP(size, PAGE_SIZE));
+	// 	if(!a)
+	// 	{
+	// 		return NULL;
+	// 	}
+
+	// 	if (!lock_already_held)
+	// 	{
+	// 		release_kspinlock(&MemFrameLists.mfllock);
+	// 	}
+	// 	programmsSizes[(resultAddress - KERNEL_HEAP_START) / PAGE_SIZE] = size;
+	// 	return (void*)resultAddress;
+	// }
 
 
 	return NULL;
 	//TODO: [PROJECT'25.BONUS#3] FAST PAGE ALLOCATOR
+	}
 }
 
 //=================================
@@ -200,7 +222,7 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 
 		if( ((page_table_entry & ~0xFFF) != 0) || ((page_table_entry & (PERM_PRESENT|PERM_BUFFERED)) != 0))
 		{
-			return EXTRACT_ADDRESS ( page_table_entry );
+			return ((EXTRACT_ADDRESS( page_table_entry )) | (virtual_address & 0xFFF));
 		}
 	}
 	return 0;
@@ -365,4 +387,15 @@ bool allocFrames(uint32 start, uint32 end){
 		}
 	}
 	return 1;
+}
+
+uint32 getProccessSize(struct ProcessNode* node)
+{
+	struct ProcessNode* nextNode = LIST_NEXT(node);
+	if(nextNode != NULL)
+	{
+		return nextNode->startVirtualAddress - node->startVirtualAddress;
+	}
+
+	return KERNEL_HEAP_MAX - node->startVirtualAddress;
 }
