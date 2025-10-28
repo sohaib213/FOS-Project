@@ -58,7 +58,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 daEnd)
 		page->num_of_free_blocks = 0;
 		page->prev_next_info.le_next = NULL;
 		page->prev_next_info.le_prev = NULL;
-		LIST_INSERT_TAIL(&freePagesList,page);
+		// LIST_INSERT_TAIL(&freePagesList,page);
 	}
 
 }
