@@ -8,6 +8,7 @@
 #include "../conc/kspinlock.h"
 
 uint32 programmsSizes[KHP_PAGES_AREA_NUMBER];
+struct pageInfo pagesInfo[KHP_PAGES_AREA_NUMBER];
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -30,7 +31,7 @@ void kheap_init()
 	}
 	//==================================================================================
 	//==================================================================================
-	memset(programmsSizes, 0, KHP_PAGES_AREA_NUMBER * sizeof(uint32));
+	// memset(programmsSizes, 0, KHP_PAGES_AREA_NUMBER * sizeof(uint32));
 
 }
 
@@ -82,73 +83,79 @@ void* kmalloc(unsigned int size)
 	}else
 	{
 
-		unsigned int maxGap = 0, maxGapAddress;
-		unsigned int pagesNeeded = ROUNDUP((uint32)size, PAGE_SIZE) / PAGE_SIZE;
-		int currentPagesNumber = 0;
-		unsigned int resultAddress = 0;
-		unsigned int startAdressOfLastFreePages = kheapPageAllocStart;
+		size = ROUNDUP(size, PAGE_SIZE);
+		unsigned int maxSize = 0, maxSizeAddress;
+		unsigned int resultAddress = 0, lastAddress = 0;
 
 		int i = 0;
 		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak;)
 		{
 			i++;
-			uint32* ptr_table;
-			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, currentAddress, &ptr_table);
-			if (ptr_fi != NULL) {
-				startAdressOfLastFreePages = currentAddress + programmsSizes[(currentAddress - kheapPageAllocStart) / PAGE_SIZE];
-				if(currentPagesNumber == pagesNeeded)
+			struct pageInfo *currentPageInfo = &pagesInfo[getPagesInfoIndex(currentAddress)];
+			if (!currentPageInfo->isBlocked) {
+				if(size == currentPageInfo->size) // CUSTOM FIT FOUND
 				{
 					resultAddress = currentAddress;
+					currentPageInfo->isBlocked = 1;
 					break;
 				}
-				if(currentPagesNumber > maxGap)
+				if(currentPageInfo->size > size && currentPageInfo->size > maxSize)
 				{
-
-					maxGap = currentPagesNumber;
-					maxGapAddress = currentAddress;
-					currentPagesNumber = 0;
+					maxSize = currentPageInfo->size;
+					maxSizeAddress = currentAddress;
 				}
-				currentAddress += programmsSizes[(currentAddress - kheapPageAllocStart) / PAGE_SIZE];
+				lastAddress = currentAddress;
 			}
-			else
-			{
-				currentPagesNumber++;
-				currentAddress += PAGE_SIZE;
-			}
+			currentAddress += currentPageInfo->size;
 		}
 		cprintf("Iterations = %d\n", i);
 		if(resultAddress == 0)
 		{
-
-			if(maxGap >= pagesNeeded)
+			if(maxSize != 0)
 			{
-				resultAddress = maxGapAddress;
+				resultAddress = maxSizeAddress;
+				struct pageInfo *maxSizePage = &pagesInfo[getPagesInfoIndex(maxSizeAddress)], *nextPage, *splitAddress;
+				splitAddress = &pagesInfo[getPagesInfoIndex(maxSizeAddress + size)];
+				nextPage = &pagesInfo[getPagesInfoIndex(maxSizeAddress + maxSizePage->size)];
+	
+				splitAddress->size = maxSizePage->size - size;
+				splitAddress->prevPageStartAddress = maxSizeAddress;
+	
+				nextPage->prevPageStartAddress = maxSizeAddress + size;
+	
+				maxSizePage->isBlocked = 1;
+				maxSizePage->size = size;
 			}
 			else{
-				if(KERNEL_HEAP_MAX - startAdressOfLastFreePages < size)
+				if(KERNEL_HEAP_MAX - kheapPageAllocBreak < size)
 				{
 					return NULL;
 				}
-
-				kheapPageAllocBreak = startAdressOfLastFreePages + ROUNDUP(size, PAGE_SIZE);
-				resultAddress = startAdressOfLastFreePages;
+	
+				resultAddress = kheapPageAllocBreak;
+				struct pageInfo *page = &pagesInfo[getPagesInfoIndex(resultAddress)];
+				page->isBlocked = 1;
+				page->size = size;
+				page->prevPageStartAddress = lastAddress;
+	
+				kheapPageAllocBreak += size;
 			}
 		}
-		// link result address with pages
-		bool a = allocFrames(resultAddress, resultAddress + ROUNDUP(size, PAGE_SIZE));
-		if(!a)
-		{
-			return NULL;
+			// link result address with pages
+			bool a = allocFrames(resultAddress, resultAddress + size);
+			if(!a)
+			{
+				return NULL;
+			}
+	
+			if (!lock_already_held)
+			{
+				release_kspinlock(&MemFrameLists.mfllock);
+			}
+			programmsSizes[(resultAddress - kheapPageAllocStart) / PAGE_SIZE] = ROUNDUP(size, PAGE_SIZE);
+			return (void*)resultAddress;
 		}
-
-		if (!lock_already_held)
-		{
-			release_kspinlock(&MemFrameLists.mfllock);
-		}
-		programmsSizes[(resultAddress - kheapPageAllocStart) / PAGE_SIZE] = ROUNDUP(size, PAGE_SIZE);
-		return (void*)resultAddress;
-	}
-
+	
 	if (!lock_already_held)
 	{
 		release_kspinlock(&MemFrameLists.mfllock);
@@ -371,4 +378,8 @@ bool allocFrames(uint32 start, uint32 end){
 		}
 	}
 	return 1;
+}
+
+uint32 getPagesInfoIndex(uint32 address){
+	return (address - kheapPageAllocStart) / PAGE_SIZE;
 }
