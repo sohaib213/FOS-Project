@@ -64,7 +64,6 @@ void* kmalloc(unsigned int size)
 	//Comment the following line
 	// kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
-	cprintf("SIZE = %d\n", size);
 	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
 
 	if (!lock_already_held)
@@ -107,14 +106,11 @@ void* kmalloc(unsigned int size)
 			}
 			lastAddress = currentAddress;
 			currentAddress += currentPageInfo->size;
-			cprintf("CUREENT ADDRESS = %p\n", currentAddress);
 		}
-		cprintf("Iterations = %d\n", i);
 		if(resultAddress == 0)
 		{
 			if(maxSize != 0)
 			{
-				cprintf("WORST FIT\n");
 				resultAddress = maxSizeAddress;
 				struct pageInfo *maxSizePage = &pagesInfo[getPagesInfoIndex(maxSizeAddress)], *nextPage, *splitAddress;
 				splitAddress = &pagesInfo[getPagesInfoIndex(maxSizeAddress + size)];
@@ -143,21 +139,20 @@ void* kmalloc(unsigned int size)
 				kheapPageAllocBreak += size;
 			}
 		}
-			// link result address with pages
-			bool a = allocFrames(resultAddress, resultAddress + size);
-			if(!a)
-			{
-				return NULL;
-			}
-
-			cprintf("Result Address = %p\n", resultAddress);
-	
-			if (!lock_already_held)
-			{
-				release_kspinlock(&MemFrameLists.mfllock);
-			}
-			return (void*)resultAddress;
+		// link result address with pages
+		bool a = allocFrames(resultAddress, resultAddress + size);
+		if(!a)
+		{
+			return NULL;
 		}
+
+
+		if (!lock_already_held)
+		{
+			release_kspinlock(&MemFrameLists.mfllock);
+		}
+		return (void*)resultAddress;
+	}
 	
 	if (!lock_already_held)
 	{
@@ -197,8 +192,6 @@ void kfree(void* virtual_address)
 
 	uint32 va = (uint32)virtual_address;
 
-	cprintf("virtual address to delete = %p\n", va);
-
 	// ========================================
 	// Case 1: Small Block (Dynamic Allocator)
 	// ========================================
@@ -233,7 +226,6 @@ void kfree(void* virtual_address)
 		}
 
 		// Calculate the number of pages to free
-		uint32 num_pages = pageToDelete->size/ PAGE_SIZE;
 		uint32 block_end = block_start + pageToDelete->size;
 
 		// Free all frames for this block
@@ -247,7 +239,6 @@ void kfree(void* virtual_address)
 		struct pageInfo *pageBeforeDeleted;
 		if(block_start != kheapPageAllocStart) // check if there a free block before it
 		{
-			cprintf("CASE 1\n");
 			pageBeforeDeleted = &pagesInfo[getPagesInfoIndex(pageToDelete->prevPageStartAddress)];
 			if(!pageBeforeDeleted -> isBlocked)
 			{
@@ -271,29 +262,34 @@ void kfree(void* virtual_address)
 		{
 			if(pageAfterDeleted->isBlocked)
 			{
-				cprintf("CASE 2\n");
 				pageAfterDeleted->prevPageStartAddress = block_start;
 			}
 			else
 			{
 				struct pageInfo *pageAfterAfter;
-				cprintf("CASE 3\n");
 				if(foundBeforePageEmpty)
 				{
 					pageBeforeDeleted->size += pageAfterDeleted->size;
-					pagesInfo[getPagesInfoIndex(block_start + pageBeforeDeleted->size + pageAfterDeleted->size)].prevPageStartAddress = block_start;
+					pagesInfo[getPagesInfoIndex(block_start + pageBeforeDeleted->size)].prevPageStartAddress = block_start;
 
 				}
 				else
 				{
 					pageToDelete->size += pageAfterDeleted->size;
-					pagesInfo[getPagesInfoIndex(block_start + pageToDelete->size + pageAfterDeleted->size)].prevPageStartAddress = block_start;
+					pagesInfo[getPagesInfoIndex(block_start + pageToDelete->size)].prevPageStartAddress = block_start;
 				}
 				pageAfterDeleted->size = 0;
 			}
 		}else{
-			cprintf("CASE 4\n");
 			kheapPageAllocBreak = block_start;
+			if(foundBeforePageEmpty)
+			{
+				pageBeforeDeleted->size = 0;
+			}
+			else
+			{
+				pageToDelete->size = 0;
+			}
 		}
 		
 		pageToDelete->isBlocked = 0;
