@@ -1,5 +1,6 @@
 {
-    "files.associations": {
-        "dynamic_allocator.h": "c"
-    }
+  "files.associations": {
+    "dynamic_allocator.h": "c",
+    "user_environment.h": "c"
+  }
 }
