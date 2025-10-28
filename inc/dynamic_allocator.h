@@ -4,6 +4,7 @@
 #include <inc/types.h>
 #include <inc/environment_definitions.h>
 
+
 /*DATA*/
 //[1] Constants
 #define LOG2_MIN_SIZE (3)								//3 Bits

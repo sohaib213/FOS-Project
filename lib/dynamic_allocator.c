@@ -47,14 +47,18 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 daEnd)
 	dynAllocStart = daStart;
 	dynAllocEnd = daEnd;
 	LIST_INIT(&freePagesList);
-	for(int i = 0; i < LOG; ++i){
+	
+	for(int i = 0; i < 9; ++i){
 		LIST_INIT(&freeBlockLists[i]);
 	}
-	for(int i = 0; i < 8192; ++i){
-		pageBlockInfoArr[i].block_size = 0;
-		pageBlockInfoArr[i].num_of_free_blocks = 0;
-		pageBlockInfoArr[i].prev_next_info.le_next = NULL;
-		pageBlockInfoArr[i].prev_next_info.le_prev = NULL;
+
+	for(int i = 0; i < DYN_ALLOC_MAX_SIZE/PAGE_SIZE; ++i){
+		struct PageInfoElement* page = &pageBlockInfoArr[i];
+		page->block_size = 0;
+		page->num_of_free_blocks = 0;
+		page->prev_next_info.le_next = NULL;
+		page->prev_next_info.le_prev = NULL;
+		LIST_INSERT_TAIL(&freePagesList,page);
 	}
 
 }
@@ -109,7 +113,13 @@ void *alloc_block(uint32 size)
 
 	// GET THE NEARST SIZE OF 2
 	uint32 nearst_size=ROUNDUP(size,2);
-	uint32 index_of_nearst_size=log2(nearst_size)-LOG2_MIN_SIZE; // TO GET THE BOWER OF 2 AND MINUS 3 FROM IT TO GET THE BASE INDEX
+	int res=0;
+	while(nearst_size > 1){
+		nearst_size >>= 1;
+		res++;
+	}
+	uint32 index_of_nearst_size=res-LOG2_MIN_SIZE;
+	//uint32 index_of_nearst_size=log2(nearst_size)-LOG2_MIN_SIZE; // TO GET THE BOWER OF 2 AND MINUS 3 FROM IT TO GET THE BASE INDEX
 	uint32 numberOfFreeBlocks=LIST_SIZE(&freeBlockLists[index_of_nearst_size]);
 	uint32 numberOfFreePages=LIST_SIZE(&freePagesList);
 	struct BlockElement* needed_block=NULL;
