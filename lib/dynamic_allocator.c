@@ -142,7 +142,7 @@ void *alloc_block(uint32 size)
 	if(numberOfFreeBlocks>0){
 		 cprintf("CASE 1\n");
 		// GET THE BLOCK AND SAVE IT THEN REMOVE IT FROM THE FREE BLOCK LIST
-		needed_block=LIST_LAST(&freeBlockLists[index_of_nearst_size]); //SAVE THE LAST ELEMENT IN PTR
+		needed_block=LIST_FIRST(&freeBlockLists[index_of_nearst_size]); //SAVE THE LAST ELEMENT IN PTR
 		LIST_REMOVE(&freeBlockLists[index_of_nearst_size],needed_block);
 
 		// FIRST WAY USING THE INDEX (UPDATE pageBlockInfoArr)
@@ -164,7 +164,7 @@ void *alloc_block(uint32 size)
 	else if (numberOfFreeBlocks==0 && numberOfFreePages>0 ){
 		cprintf("CASE 2\n");
 		// TAKE FREE PAGE FROM (FREE PAGE LIST)
-		struct PageInfoElement* new_free_page=LIST_LAST(&freePagesList);
+		struct PageInfoElement* new_free_page=LIST_FIRST(&freePagesList);
 		LIST_REMOVE(&freePagesList,new_free_page);
 		// GET THE VA OF THE TAKEN FREE PAGE IN THE VM
 		// cprintf("11\n");
@@ -190,17 +190,19 @@ void *alloc_block(uint32 size)
 		// 	cprintf("size: %d number = %d\n", (1 << (i + 3)), freeBlockLists[i].size);
 		// }
 		// cprintf("GET BLOCKS SUCCESSFULLY\n");
+
+
 		// UPDATE THE CORRESPONDING PageBlockInfoArr ELEMENT
 		struct PageInfoElement* pageInfoElement=get_pageInfoArr_element_ptr((void*)VA);
 		pageInfoElement->block_size=nearst_size;
-		pageInfoElement->num_of_free_blocks=(PAGE_SIZE/nearst_size); // -1 for taken block
+		pageInfoElement->num_of_free_blocks=(PAGE_SIZE/nearst_size)-1; // -1 for taken block
 
 		// GET THE BLOCK AND RETURN IT
-//		needed_block=LIST_LAST(&freeBlockLists[index_of_nearst_size]);
-//		LIST_REMOVE(&freeBlockLists[index_of_nearst_size],needed_block);
-//
+		needed_block=LIST_LAST(&freeBlockLists[index_of_nearst_size]);
+		LIST_REMOVE(&freeBlockLists[index_of_nearst_size],needed_block);
+
 //		pageInfoElement->num_of_free_blocks--;// -1 for taken block
-		needed_block=alloc_block(nearst_size);
+//		needed_block=alloc_block(nearst_size);
 
 		return (void*)needed_block;
 
