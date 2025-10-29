@@ -262,7 +262,7 @@ void *alloc_block(uint32 size)
 
 	// CASE 1
 	if(numberOfFreeBlocks>0){
-		 cprintf("CASE 1\n");
+		//  cprintf("CASE 1\n");
 		// GET THE BLOCK AND SAVE IT THEN REMOVE IT FROM THE FREE BLOCK LIST
 		needed_block=LIST_FIRST(&freeBlockLists[index_of_nearst_size]); //SAVE THE LAST ELEMENT IN PTR
 		LIST_REMOVE(&freeBlockLists[index_of_nearst_size],needed_block);
@@ -284,7 +284,7 @@ void *alloc_block(uint32 size)
 
 	// CASE 2
 	else if (numberOfFreeBlocks==0 && numberOfFreePages>0 ){
-		cprintf("CASE 2\n");
+		// cprintf("CASE 2\n");
 		// TAKE FREE PAGE FROM (FREE PAGE LIST)
 		struct PageInfoElement* new_free_page=LIST_FIRST(&freePagesList);
 		LIST_REMOVE(&freePagesList,new_free_page);
@@ -322,7 +322,7 @@ void *alloc_block(uint32 size)
 	}
 	// CASE 3
 	else if(numberOfFreePages==0){
-		cprintf("CASE 3\n");
+		// cprintf("CASE 3\n");
 		if(nearst_size<=DYN_ALLOC_MAX_BLOCK_SIZE/2){
 			needed_block=alloc_block(nearst_size*2);
 		}
@@ -353,7 +353,7 @@ void free_block(void *va)
 
 	//TODO: [PROJECT'25.GM#1] DYNAMIC ALLOCATOR - #4 free_block
 	//Your code is here
-	uint32 correspond_block_size=get_block_size((void*)va);
+	uint32 correspond_block_size=get_block_size(va);
 	unsigned int index_of_block_size = 0;
 	int size_for_test=correspond_block_size;
 	while (size_for_test > 1) {
@@ -362,27 +362,38 @@ void free_block(void *va)
 	}
 	index_of_block_size-=LOG2_MIN_SIZE;
 	// REMVOE THE BLOCK FROM THE FREE BLOCK LIST
+	// cprintf("1\n");
 	LIST_INSERT_HEAD(&freeBlockLists[index_of_block_size],(struct BlockElement*)va);
+	// cprintf("2\n");
 
 	// UPDATE PageBlockInfoArr
 	struct PageInfoElement* pageInfoElement=get_pageInfoArr_element_ptr((void*)va);
 	pageInfoElement->num_of_free_blocks++;
 	uint32 max_free_blocks=(PAGE_SIZE/correspond_block_size);
+	// cprintf("3\n");
 
 	// CHECK IF FREE BLOCKS LED TO THE MAX FREE BLOCKS
 	if(pageInfoElement->num_of_free_blocks==max_free_blocks){
 		// DELETE ALL THE FREE BLOCKS RELATED TO THE FREED PAGE
 		struct BlockElement* blockElement;
+		// cprintf("size = %d", pageBlockInfoArr->block_size);
 		LIST_FOREACH(blockElement, &freeBlockLists[index_of_block_size]) {
 		   // GET THE CORR PAGE INFO AND COMPARE EVERY BLOCK IF IT SAME THE CORR PAGE INFO WITH US (DELETE IT)
 			if(get_pageInfoArr_element_ptr((void*)blockElement)==pageInfoElement){
+				// cprintf("REMOVED\n");
 				LIST_REMOVE(&freeBlockLists[index_of_block_size],blockElement);
 			}
 		}
+		// cprintf("4\n");
 		// RETURN THE FRAME INTO THE PHYSICAL MEM AGAIN
-		return_page((void*)pageInfoElement);
+		return_page((void *)(ROUNDDOWN(va, PAGE_SIZE)));
+		// cprintf("5\n");
+
 		// RETURN THE PAGE AGAIN IN THE FREE PAGE LIST
-		LIST_INSERT_TAIL(&freePagesList,pageInfoElement);
+		pageInfoElement->block_size = 0;
+		pageInfoElement->num_of_free_blocks = 0;
+		LIST_INSERT_TAIL(&freePagesList, pageInfoElement);
+		// cprintf("6\n");
 
 	}
 
