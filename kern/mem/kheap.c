@@ -371,130 +371,121 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//Your code is here
 	//Comment the following line
 	panic("krealloc() is not implemented yet...!!");
-	// bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
+	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
 
-	// if (!lock_already_held)
-	// {
-	// 	acquire_kspinlock(&MemFrameLists.mfllock);
-	// }
-	// if(virtual_address == NULL)
-	// {
-	// 	return (void *)kmalloc(new_size);
-	// }
+	if (!lock_already_held)
+	{
+		acquire_kspinlock(&MemFrameLists.mfllock);
+	}
+	if(virtual_address == NULL)
+	{
+		return (void *)kmalloc(new_size);
+	}
 	
-	// if(new_size == 0)
-	// {
-	// 	kfree(virtual_address);
-	// 	return virtual_address;
-	// }
+	if(new_size == 0)
+	{
+		kfree(virtual_address);
+		return virtual_address;
+	}
 
-	// if(new_size < DYN_ALLOC_MAX_BLOCK_SIZE)
-	// {
-	// 	// handle blocks
-	// }
+	if(new_size < DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		// handle blocks
+	}
 
-	// uint32 oldSize = programmsSizes[((uint32) - kheapPageAllocStart) / PAGE_SIZE];
-	// if(oldSize == 0)
-	// {
-	// 	panic("There is no old process to reallocate");
-	// }
-	// if(new_size == oldSize)
-	// {
-	// 	return virtual_address;
-	// }
+	uint32 va = (uint32)virtual_address;
+	struct pageInfo *oldProgramm = &pagesInfo[getPagesInfoIndex(va)];
+	if(oldProgramm->size == 0)
+	{
+		panic("There is no old process to reallocate");
+	}
+	if(new_size == oldProgramm->size)
+	{
+		return virtual_address;
+	}
 
-	// if(new_size > oldSize)
-	// {
-	// 	oldSize = ROUNDUP(oldSize, PAGE_SIZE);
-	// 	// alloc more frames
-	// 	uint32 pagesNeeded = ROUNDUP((new_size - oldSize), PAGE_SIZE) / PAGE_SIZE;
-	// 	uint32 pagesUpoveBreak = 0;
-	// 	uint32 addressOfTheStartFreePagesBelow = ROUNDDOWN((uint32)virtual_address, PAGE_SIZE);
-	// 	uint32 addressOfTheEndFreePagesAbove = addressOfTheStartFreePagesBelow + oldSize;
+	if(new_size > oldProgramm->size)
+	{
+		// alloc more frames
+		uint32 sizeNeeded = new_size - oldProgramm->size;
+		
+		struct pageInfo *before, *after;
+		if(va != kheapPageAllocStart)
+			before = &pagesInfo[getPagesInfoIndex(oldProgramm->prevPageStartAddress)];
+		if(va + oldProgramm->size != kheapPageAllocBreak)
+			after = &pagesInfo[getPagesInfoIndex(oldProgramm->size + va)];
 
-	// 	while(addressOfTheStartFreePagesBelow > kheapPageAllocStart)
-	// 	{
-	// 		addressOfTheStartFreePagesBelow -= PAGE_SIZE;
-	// 		uint32* ptr_table;
-	// 		struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, addressOfTheStartFreePagesBelow, &ptr_table);
-	// 		if (ptr_fi == NULL) {
-	// 			pagesNeeded--;
-	// 			if(pagesNeeded == 0)
-	// 			{
-	// 				break;
-	// 			}
-	// 		}
-	// 		else{
-	// 			addressOfTheStartFreePagesBelow += PAGE_SIZE;
-	// 			break;
-	// 		}
-	// 	}
-	// 	bool reachedToBreak = 0;
-	// 	if(pagesNeeded != 0)
-	// 	{
-	// 		while(1)
-	// 		{
-	// 			if(addressOfTheEndFreePagesAbove == kheapPageAllocBreak)
-	// 			{
-	// 				reachedToBreak = 1;
-	// 				break;
-	// 			}
-				
-	// 			uint32* ptr_table;
-	// 			struct FrameInfo* ptr_fi = get_frame_info(ptr_page_directory, addressOfTheEndFreePagesAbove, &ptr_table);
-	// 			if (ptr_fi == NULL) {
-	// 				pagesNeeded--;
-	// 				addressOfTheEndFreePagesAbove += PAGE_SIZE;
-	// 				if(pagesNeeded == 0)
-	// 				{
-	// 					break;
-	// 				}
-	// 			}
-	// 			else{
-	// 				break;
-	// 			}
-	// 		}
-	// 	}
-	// 	if(pagesNeeded != 0 && reachedToBreak)
-	// 	{
-	// 		uint32 pagesBetweenBreakAndHeapMax = (KERNEL_HEAP_MAX - kheapPageAllocBreak) / PAGE_SIZE;
-	// 		if(pagesBetweenBreakAndHeapMax >= pagesNeeded)
-	// 		{
-	// 			kheapPageAllocBreak += pagesNeeded * PAGE_SIZE;
-	// 			addressOfTheEndFreePagesAbove = kheapPageAllocBreak;
-	// 			pagesNeeded = 0;
-	// 		}
-	// 	}
+		if(before != NULL)
+		{
+			if(!before->isBlocked)
+			{
+				if(before->size > sizeNeeded)
+				{
+					//split node and take upper space for current node
+					sizeNeeded = 0;
+				}
+				else
+				{
+					sizeNeeded -= before->size;
+					// merge the before node to current one
+				}
+			}
+		}
+		
+		if(after != NULL)
+		{
+			if(!after->isBlocked && sizeNeeded != 0)
+			{
+				if(after->size == sizeNeeded)
+				{
+					// merge with node
+				}
+				else if(after->size > sizeNeeded){
+					// merge with node
+				}
+				else{
+					return NULL;
+				}
+			}
+		}
+		
+		if(after == NULL)
+		{
+			if(KERNEL_HEAP_MAX - kheapPageAllocBreak >= sizeNeeded)
+			{
+				// take from unused space
+			}
+		}
+		
+		// if(sizeNeeded == 0)
+		// {
+		// 	bool a = allocFrames(addressOfTheStartFreePagesBelow, ROUNDDOWN((uint32)virtual_address, PAGE_SIZE));
+		// 	if(!a)
+		// 	{
+		// 		return NULL;
+		// 	}
+		// 	a = allocFrames(ROUNDDOWN((uint32)virtual_address, PAGE_SIZE) + oldSize, addressOfTheEndFreePagesAbove);
+		// 	if(!a)
+		// 	{
+		// 		//free upove linked frames
+		// 		return NULL;
+		// 	}
+		// }else{
+		// 	// free old linked frames
+		// 	// will replace the prgramm in another valid place
+		// 	return kmalloc(new_size);
+		// }
+	}
 
-	// 	if(pagesNeeded == 0)
-	// 	{
-	// 		bool a = allocFrames(addressOfTheStartFreePagesBelow, ROUNDDOWN((uint32)virtual_address, PAGE_SIZE));
-	// 		if(!a)
-	// 		{
-	// 			return NULL;
-	// 		}
-	// 		a = allocFrames(ROUNDDOWN((uint32)virtual_address, PAGE_SIZE) + oldSize, addressOfTheEndFreePagesAbove);
-	// 		if(!a)
-	// 		{
-	// 			//free upove linked frames
-	// 			return NULL;
-	// 		}
-	// 	}else{
-	// 		// free old linked frames
-	// 		// will replace the prgramm in another valid place
-	// 		return kmalloc(new_size);
-	// 	}
-	// }
-
-	// // free frames
+	// free frames
 
 
-	// if (!lock_already_held)
-	// {
-	// 	release_kspinlock(&MemFrameLists.mfllock);
-	// }
+	if (!lock_already_held)
+	{
+		release_kspinlock(&MemFrameLists.mfllock);
+	}
 
-	// return NULL;
+	return NULL;
 }
 
 bool allocFrames(uint32 start, uint32 end){

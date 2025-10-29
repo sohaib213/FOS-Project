@@ -182,3 +182,18 @@ always:
 .PHONY: all always \
 	handin tarball clean new realclean clean-labsetup distclean grade labsetup
 
+# Define the QEMU command
+QEMU ?= qemu-system-i386
+
+# Target to run the OS in QEMU
+qemu: $(IMAGES)
+	$(QEMU) -drive file=$< -m 128M -smp 1 -vga std -display default -serial stdio 
+
+# Alternative for no graphics/separate window (similar to your bochs target's quiet option)
+qemu-nox: $(IMAGES)
+	$(QEMU) -drive file=$< -m 128M -smp 1 -nographic -serial stdio
+
+# Add 'qemu' and 'qemu-nox' to your .PHONY list
+.PHONY: all always \
+	handin tarball clean new realclean clean-labsetup distclean grade labsetup \
+	qemu qemu-nox
