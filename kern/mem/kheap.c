@@ -79,6 +79,10 @@ void* kmalloc(unsigned int size)
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
 		int* a = alloc_block(size);
+		if(a == NULL)
+			return NULL;
+		else
+			return (void *)a;
 	}else
 	{
 
