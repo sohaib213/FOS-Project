@@ -47,7 +47,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 daEnd)
 	dynAllocStart = daStart;
 	dynAllocEnd = daEnd;
 	LIST_INIT(&freePagesList);
-	
+
 	for(int i = 0; i < 9; ++i){
 		LIST_INIT(&freeBlockLists[i]);
 	}
@@ -140,7 +140,7 @@ void *alloc_block(uint32 size)
 
 	// CASE 1
 	if(numberOfFreeBlocks>0){
-		// cprintf("CASE 1\n");
+		 cprintf("CASE 1\n");
 		// GET THE BLOCK AND SAVE IT THEN REMOVE IT FROM THE FREE BLOCK LIST
 		needed_block=LIST_FIRST(&freeBlockLists[index_of_nearst_size]); //SAVE THE LAST ELEMENT IN PTR
 		LIST_REMOVE(&freeBlockLists[index_of_nearst_size],needed_block);
@@ -161,7 +161,7 @@ void *alloc_block(uint32 size)
 	}
 
 	// CASE 2
-	else if (numberOfFreeBlocks==0){
+	else if (numberOfFreeBlocks==0 && numberOfFreePages>0 ){
 		cprintf("CASE 2\n");
 		// TAKE FREE PAGE FROM (FREE PAGE LIST)
 		struct PageInfoElement* new_free_page=LIST_FIRST(&freePagesList);
@@ -190,14 +190,19 @@ void *alloc_block(uint32 size)
 		// 	cprintf("size: %d number = %d\n", (1 << (i + 3)), freeBlockLists[i].size);
 		// }
 		// cprintf("GET BLOCKS SUCCESSFULLY\n");
+
+
 		// UPDATE THE CORRESPONDING PageBlockInfoArr ELEMENT
 		struct PageInfoElement* pageInfoElement=get_pageInfoArr_element_ptr((void*)VA);
 		pageInfoElement->block_size=nearst_size;
 		pageInfoElement->num_of_free_blocks=(PAGE_SIZE/nearst_size)-1; // -1 for taken block
 
 		// GET THE BLOCK AND RETURN IT
-		needed_block=LIST_FIRST(&freeBlockLists[index_of_nearst_size]);
+		needed_block=LIST_LAST(&freeBlockLists[index_of_nearst_size]);
 		LIST_REMOVE(&freeBlockLists[index_of_nearst_size],needed_block);
+
+//		pageInfoElement->num_of_free_blocks--;// -1 for taken block
+//		needed_block=alloc_block(nearst_size);
 
 		return (void*)needed_block;
 
@@ -208,9 +213,9 @@ void *alloc_block(uint32 size)
 		if(nearst_size<=DYN_ALLOC_MAX_BLOCK_SIZE/2){
 			needed_block=alloc_block(nearst_size*2);
 		}
-		else {
-			panic("no free blocks and no free pages ");
-		}
+//		else {
+//			panic("no free blocks and no free pages ");
+//		}
 		return (void*)needed_block;
 	}
 	return (void*)needed_block;
@@ -226,6 +231,7 @@ void *alloc_block(uint32 size)
 //===========================
 void free_block(void *va)
 {
+
 	//==================================================================================
 	//DON'T CHANGE THESE LINES==========================================================
 	//==================================================================================
@@ -237,8 +243,42 @@ void free_block(void *va)
 
 	//TODO: [PROJECT'25.GM#1] DYNAMIC ALLOCATOR - #4 free_block
 	//Your code is here
+	uint32 correspond_block_size=get_block_size((void*)va);
+	unsigned int index_of_block_size = 0;
+	while (correspond_block_size > 1) {
+		correspond_block_size >>= 1;
+		index_of_block_size++;
+	}
+	index_of_block_size-=LOG2_MIN_SIZE;
+	// REMVOE THE BLOCK FROM THE FREE BLOCK LIST
+	LIST_REMOVE(&freeBlockLists[index_of_block_size],(struct BlockElement*)va);
+
+	// UPDATE PageBlockInfoArr
+	struct PageInfoElement* pageInfoElement=get_pageInfoArr_element_ptr((void*)va);
+	pageInfoElement->num_of_free_blocks++;
+	uint32 max_free_blocks=(PAGE_SIZE/correspond_block_size);
+
+	// CHECK IF FREE BLOCKS LED TO THE MAX FREE BLOCKS
+	if(pageInfoElement->num_of_free_blocks==max_free_blocks){
+		// RETURN THE PAGE AGAIN IN THE FREE PAGE LIST
+		LIST_INSERT_TAIL(&freePagesList,pageInfoElement);
+		// DELETE ALL THE FREE BLOCKS RELATED TO THE FREED PAGE
+		struct BlockElement* blockElement=LIST_FIRST(&freeBlockLists[index_of_block_size]);
+		LIST_FOREACH(blockElement, &freeBlockLists[index_of_block_size]) {
+		   // GET THE CORR PAGE INFO AND COMPARE EVERY BLOCK IF IT SAME THE CORR PAGE INFO WITH US (DELETE IT)
+			if(get_pageInfoArr_element_ptr((void*)blockElement)==pageInfoElement){
+				LIST_REMOVE(&freeBlockLists[index_of_block_size],blockElement);
+			}
+		}
+		// RETURN THE FRAME INTO THE PHYSICAL MEM AGAIN
+		return_page((void*)pageInfoElement);
+
+	}
+
+
 	//Comment the following line
-	panic("free_block() Not implemented yet");
+
+	//panic("free_block() Not implemented yet");
 }
 
 //==================================================================================//
