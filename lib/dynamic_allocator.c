@@ -245,8 +245,9 @@ void free_block(void *va)
 	//Your code is here
 	uint32 correspond_block_size=get_block_size((void*)va);
 	unsigned int index_of_block_size = 0;
-	while (correspond_block_size > 1) {
-		correspond_block_size >>= 1;
+	int size_for_test=correspond_block_size;
+	while (size_for_test > 1) {
+		size_for_test >>= 1;
 		index_of_block_size++;
 	}
 	index_of_block_size-=LOG2_MIN_SIZE;
@@ -260,10 +261,8 @@ void free_block(void *va)
 
 	// CHECK IF FREE BLOCKS LED TO THE MAX FREE BLOCKS
 	if(pageInfoElement->num_of_free_blocks==max_free_blocks){
-		// RETURN THE PAGE AGAIN IN THE FREE PAGE LIST
-		LIST_INSERT_TAIL(&freePagesList,pageInfoElement);
 		// DELETE ALL THE FREE BLOCKS RELATED TO THE FREED PAGE
-		struct BlockElement* blockElement=LIST_FIRST(&freeBlockLists[index_of_block_size]);
+		struct BlockElement* blockElement;
 		LIST_FOREACH(blockElement, &freeBlockLists[index_of_block_size]) {
 		   // GET THE CORR PAGE INFO AND COMPARE EVERY BLOCK IF IT SAME THE CORR PAGE INFO WITH US (DELETE IT)
 			if(get_pageInfoArr_element_ptr((void*)blockElement)==pageInfoElement){
@@ -272,6 +271,8 @@ void free_block(void *va)
 		}
 		// RETURN THE FRAME INTO THE PHYSICAL MEM AGAIN
 		return_page((void*)pageInfoElement);
+		// RETURN THE PAGE AGAIN IN THE FREE PAGE LIST
+		LIST_INSERT_TAIL(&freePagesList,pageInfoElement);
 
 	}
 
