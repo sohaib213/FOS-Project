@@ -187,7 +187,7 @@ void *alloc_block(uint32 size)
 		}
 		// for(int i = 0; i < 8; i++)
 		// {
-		// 	cprintf("size: %d number = %d\n", (1 << (i + 3)), freeBlockLists[index_of_nearst_size].size);
+		// 	cprintf("size: %d number = %d\n", (1 << (i + 3)), freeBlockLists[i].size);
 		// }
 		// cprintf("GET BLOCKS SUCCESSFULLY\n");
 		// UPDATE THE CORRESPONDING PageBlockInfoArr ELEMENT
