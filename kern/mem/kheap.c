@@ -155,6 +155,7 @@ void* kmalloc(unsigned int size)
 		{
 			release_kspinlock(&MemFrameLists.mfllock);
 		}
+		// cprintf("Result address = %p\n", resultAddress);
 		return (void*)resultAddress;
 	}
 	
@@ -325,6 +326,8 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	struct FrameInfo* ptr_fi = to_frame_info(physical_address);
 	if(ptr_fi -> references == 0)
 		return 0;
+	if(ptr_fi -> virtual_address == 0)
+		return 0;
 	return ptr_fi->virtual_address | offset;
 	/*EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED */
 }
@@ -334,22 +337,27 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 //=================================
 unsigned int kheap_physical_address(unsigned int virtual_address)
 {
+	// cprintf("virtual address = %p\n", virtual_address);
 	//TODO: [PROJECT'25.GM#2] KERNEL HEAP - #4 kheap_physical_address
 	//Your code is here
 	//Comment the following line
 	// panic("kheap_physical_address() is not implemented yet...!!");
 	uint32* ptr_table ;
 	uint32 ret =  get_page_table(ptr_page_directory, virtual_address, &ptr_table) ;
-	if((*ptr_table) != 0)
+	if(ptr_table != NULL)
 	{
+		// cprintf("THERE IS TABLE\n");
 		uint32 index_page_table = PTX(virtual_address);
 		uint32 page_table_entry = ptr_table[index_page_table];
+		uint32 offset = virtual_address & 0xFFF;
 
-		if( ((page_table_entry & ~0xFFF) != 0) || ((page_table_entry & (PERM_PRESENT|PERM_BUFFERED)) != 0))
+		if((EXTRACT_ADDRESS(page_table_entry) != 0) || ((page_table_entry & (PERM_PRESENT|PERM_BUFFERED)) != 0))
 		{
-			return EXTRACT_ADDRESS ( page_table_entry );
+			// cprintf("DID = %p\n", virtual_address);
+			return EXTRACT_ADDRESS ( page_table_entry ) | offset;
 		}
 	}
+	// cprintf("virtual address failed = %p\n", virtual_address);
 	return 0;
 	/*EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED */
 }
@@ -495,12 +503,13 @@ void *krealloc(void *virtual_address, uint32 new_size)
 bool allocFrames(uint32 start, uint32 end){
 	for(uint32 currentAddress = start; currentAddress < end; currentAddress += PAGE_SIZE)
 	{
-		int ret = alloc_page(ptr_page_directory, currentAddress, PERM_PRESENT | PERM_WRITEABLE, 0);
+
+		int ret = alloc_page(ptr_page_directory, currentAddress, PERM_WRITEABLE, 1);
 		if(ret != 0)
 		{
-			// free recent allocated frames
 			return 0;
 		}
+		// cprintf("VA = %p\n", currentAddress);
 	}
 	return 1;
 }
