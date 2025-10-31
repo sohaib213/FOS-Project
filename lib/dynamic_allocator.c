@@ -52,7 +52,11 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 daEnd)
 		LIST_INIT(&freeBlockLists[i]);
 	}
 
-	for(int i = 0; i < DYN_ALLOC_MAX_SIZE/PAGE_SIZE; ++i){
+	if(daEnd - daStart > DYN_ALLOC_MAX_SIZE)
+	{
+		panic("The Needed Dynamic Allocation Size Is More Than Allowed");
+	}
+	for(int i = 0; i < ROUNDUP(daEnd - daStart, PAGE_SIZE)/PAGE_SIZE; ++i){
 		struct PageInfoElement* page = &pageBlockInfoArr[i];
 		// no need this is by default implemented
 		// page->block_size = 0;
