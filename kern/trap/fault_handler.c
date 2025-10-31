@@ -12,6 +12,7 @@
 #include <kern/disk/pagefile_manager.h>
 #include <kern/mem/memory_manager.h>
 #include <kern/mem/kheap.h>
+#include <inc/queue.h>
 
 //2014 Test Free(): Set it to bypass the PAGE FAULT on an instruction with this length and continue executing the next one
 // 0 means don't bypass the PAGE FAULT
@@ -165,6 +166,26 @@ void fault_handler(struct Trapframe *tf)
 			//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #2 Check for invalid pointers
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
+			int per=pt_get_page_permissions(faulted_env->env_page_directory,fault_va);
+
+						if(fault_va>=KERNEL_BASE){
+							env_exit();
+							return;
+						}
+						else if(fault_va>=USER_HEAP_START && fault_va<USER_HEAP_MAX){
+
+							if((per&PERM_UHPAGE)==0){
+								env_exit();
+								return;
+							}
+						}
+
+						if ((tf->tf_err & FEC_WR) != 0) {
+						if((per&PERM_WRITEABLE)==0){
+						env_exit();
+						return;
+					}
+						}
 
 			/*============================================================================================*/
 		}
@@ -258,7 +279,39 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #3 placement
 		//Your code is here
 		//Comment the following line
-		panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
+		//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
+		if(wsSize < (faulted_env->page_WS_max_size))
+			{
+				//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #3 placement
+				//Your code is here
+				//Comment the following line
+				//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
+				int permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
+
+				struct FrameInfo *poin_frameinfo;
+				 allocate_frame(&poin_frameinfo);
+
+				 map_frame(ptr_page_directory,poin_frameinfo,fault_va,permission);
+
+
+				 int mkd = pf_read_env_page(faulted_env, fault_va);
+
+				 if(mkd==E_PAGE_NOT_EXIST_IN_PF){
+					 bool is_heap = (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX);
+					 bool is_stack = (fault_va >= USTACKBOTTOM && fault_va < USTACKTOP);
+
+					 if (!is_heap && !is_stack){
+						  env_exit();
+
+						  return;
+
+					  }
+
+				 }
+
+				 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
+				 LIST_INSERT_TAIL(&(faulted_env->page_ws_list), new_element);
+			}
 	}
 	else
 	{

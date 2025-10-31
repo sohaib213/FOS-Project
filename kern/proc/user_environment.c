@@ -913,7 +913,26 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #1 create_user_kern_stack
 	//Your code is here
 	//Comment the following line
-	panic("create_user_kern_stack() is not implemented yet...!!");
+	//panic("create_user_kern_stack() is not implemented yet...!!");
+	uint32 PAGES;
+		uint32 Virtual_ad;
+		int perm = PERM_WRITEABLE;
+		PAGES = (KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE;
+		struct FrameInfo *Frame_arr[PAGES];
+		for(int i=0;i<PAGES;i++){
+			if (allocate_frame(&Frame_arr[i]) != 0) {
+			            for (int j=0; j<i;j++){
+			                free_frame(Frame_arr[j]);
+			            }
+			            panic("create_user_kern_stack: No enough memory!");
+			        }
+		}
+		for(int i=0;i<PAGES;i++){
+			Virtual_ad = KERN_STACK_TOP - (i + 1) * PAGE_SIZE;
+			map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
+		}
+
+		return (void*)(KERN_STACK_TOP - (PAGES + 1) * PAGE_SIZE);
 
 	//allocate space for the user kernel stack.
 	//remember to leave its bottom page as a GUARD PAGE (i.e. not mapped)
