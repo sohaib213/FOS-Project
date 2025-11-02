@@ -294,7 +294,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				 map_frame(ptr_page_directory,poin_frameinfo,fault_va,permission);
 
 
-				 int mkd = pf_read_env_page(faulted_env, fault_va);
+				 int mkd = pf_read_env_page(faulted_env, (void *)fault_va);
 
 				 if(mkd==E_PAGE_NOT_EXIST_IN_PF){
 					 bool is_heap = (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX);
@@ -310,7 +310,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				 }
 
 				 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
-				 LIST_INSERT_TAIL(&(faulted_env->page_ws_list), new_element);
+				 LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
 			}
 	}
 	else
