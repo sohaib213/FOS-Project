@@ -78,7 +78,7 @@ void* kmalloc(unsigned int size)
 
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
-		int* a = alloc_block(size);
+		uint32* a = alloc_block(size);
 		if(a == NULL)
 			return NULL;
 		else
@@ -177,12 +177,11 @@ void kfree(void* virtual_address)
 	//Comment the following line
 	// panic("kfree() is not implemented yet...!!");
 
-		
 	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
 
 	if (!lock_already_held)
 	{
-			acquire_kspinlock(&MemFrameLists.mfllock);
+		acquire_kspinlock(&MemFrameLists.mfllock);
 	}
 
 	if(virtual_address == NULL)
@@ -382,7 +381,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//TODO: [PROJECT'25.BONUS#2] KERNEL REALLOC - krealloc
 	//Your code is here
 	//Comment the following line
-	panic("krealloc() is not implemented yet...!!");
+	// panic("krealloc() is not implemented yet...!!");
 	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
 
 	if (!lock_already_held)
@@ -391,7 +390,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	}
 	if(virtual_address == NULL)
 	{
-		return (void *)kmalloc(new_size);
+		return kmalloc(new_size);
 	}
 	
 	if(new_size == 0)
@@ -399,13 +398,41 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		kfree(virtual_address);
 		return virtual_address;
 	}
-
-	if(new_size < DYN_ALLOC_MAX_BLOCK_SIZE)
+	
+	uint32 va = (uint32)virtual_address;
+	// new size is block
+	if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
-		// handle blocks
+		uint32* vaResult = alloc_block(new_size);
+		if(vaResult == NULL)
+		{
+			return NULL;
+		}
+		// old size was block
+		if(va >= dynAllocStart && va <= dynAllocEnd)
+		{
+			free_block(virtual_address);
+		}
+		else
+		{
+			kfree(virtual_address);
+		}
+		return (void *) vaResult;
 	}
 
-	uint32 va = (uint32)virtual_address;
+	new_size = ROUNDUP(new_size, PAGE_SIZE);
+	// old size was block
+	if(va >= dynAllocStart && va <= dynAllocEnd)
+	{
+		void * vaRes = kmalloc(new_size);
+		if(vaRes == NULL)
+		{
+			return NULL;
+		}
+		free_block(virtual_address);
+		return vaRes;
+	}
+	va = ROUNDDOWN(va, PAGE_SIZE);
 	struct pageInfo *oldProgramm = &pagesInfo[getPagesInfoIndex(va)];
 	if(oldProgramm->size == 0)
 	{
@@ -415,11 +442,11 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	{
 		return virtual_address;
 	}
-
-	if(new_size > oldProgramm->size)
+	else if(new_size > oldProgramm->size)
 	{
 		// alloc more frames
 		uint32 sizeNeeded = new_size - oldProgramm->size;
+		uint32 sizeNeededWillNotBeChanged = sizeNeeded;
 		
 		struct pageInfo *before, *after;
 		if(va != kheapPageAllocStart)
@@ -427,6 +454,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		if(va + oldProgramm->size != kheapPageAllocBreak)
 			after = &pagesInfo[getPagesInfoIndex(oldProgramm->size + va)];
 
+		uint8 beforeCondition = 0;
 		if(before != NULL)
 		{
 			if(!before->isBlocked)
@@ -435,28 +463,34 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				{
 					//split node and take upper space for current node
 					sizeNeeded = 0;
+					beforeCondition = 1;
 				}
 				else
 				{
 					sizeNeeded -= before->size;
 					// merge the before node to current one
+					beforeCondition = 2;
 				}
 			}
 		}
 		
-		if(after != NULL)
+		uint8 afterCondition = 0;
+		uint32 sizeToAllocAfter = 0;
+		if(after != NULL && sizeNeeded != 0)
 		{
-			if(!after->isBlocked && sizeNeeded != 0)
+			if(!after->isBlocked)
 			{
-				if(after->size == sizeNeeded)
+				sizeToAllocAfter = sizeNeeded;
+				if(after->size > sizeNeeded)
 				{
-					// merge with node
+					// split the after node and take the bottom space
+					afterCondition = 1;
+					sizeNeeded = 0;
 				}
-				else if(after->size > sizeNeeded){
+				else if(after->size == sizeNeeded){
 					// merge with node
-				}
-				else{
-					return NULL;
+					afterCondition = 2;
+					sizeNeeded = 0;
 				}
 			}
 		}
@@ -465,32 +499,135 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		{
 			if(KERNEL_HEAP_MAX - kheapPageAllocBreak >= sizeNeeded)
 			{
-				// take from unused space
+				kheapPageAllocBreak += sizeNeeded;
+				sizeNeeded = 0;
+				after = &pagesInfo[getPagesInfoIndex(kheapPageAllocBreak)];
+				after->size = sizeNeeded;
+				afterCondition = 2;
 			}
 		}
 		
-		// if(sizeNeeded == 0)
-		// {
-		// 	bool a = allocFrames(addressOfTheStartFreePagesBelow, ROUNDDOWN((uint32)virtual_address, PAGE_SIZE));
-		// 	if(!a)
-		// 	{
-		// 		return NULL;
-		// 	}
-		// 	a = allocFrames(ROUNDDOWN((uint32)virtual_address, PAGE_SIZE) + oldSize, addressOfTheEndFreePagesAbove);
-		// 	if(!a)
-		// 	{
-		// 		//free upove linked frames
-		// 		return NULL;
-		// 	}
-		// }else{
-		// 	// free old linked frames
-		// 	// will replace the prgramm in another valid place
-		// 	return kmalloc(new_size);
-		// }
+
+		if(sizeNeeded == 0)
+		{
+			bool a;
+			uint32 startAddress = va;
+			if(beforeCondition == 1 || beforeCondition == 2)
+			{
+				if(beforeCondition == 1)
+				{
+					struct pageInfo* pageOnSplit = &pagesInfo[(getPagesInfoIndex(va - sizeNeededWillNotBeChanged))];
+					startAddress = va - sizeNeededWillNotBeChanged;
+					before->size -= sizeNeededWillNotBeChanged;
+					pageOnSplit->prevPageStartAddress = oldProgramm->prevPageStartAddress;
+					pageOnSplit->size = new_size;
+					if(after != NULL)
+					{
+						after -> prevPageStartAddress = startAddress;
+					}
+				}
+				else
+				{
+					startAddress = oldProgramm -> prevPageStartAddress;
+					before->size += oldProgramm->size;
+					before->isBlocked = 1;
+					if(after != NULL)
+					{
+						after -> prevPageStartAddress = oldProgramm->prevPageStartAddress;
+					}
+
+				}
+				oldProgramm->isBlocked = 0;
+				oldProgramm->size = 0;
+				oldProgramm->prevPageStartAddress = 0;
+				oldProgramm = before;
+				
+				a = allocFrames(startAddress, va);
+				if(!a)
+				{
+					return NULL;
+				}
+			}
+
+			if(afterCondition == 1 || afterCondition == 2)
+			{
+				struct pageInfo* newAfter;
+				oldProgramm->size += sizeToAllocAfter;
+
+				if(afterCondition == 1)
+				{
+					newAfter = &pagesInfo[getPagesInfoIndex(startAddress + oldProgramm->size)];
+					newAfter->size = after->size - sizeToAllocAfter;
+					newAfter->prevPageStartAddress = startAddress;
+				}
+				else
+				{
+					if(startAddress + oldProgramm->size != kheapPageAllocBreak)
+					{
+						newAfter = &pagesInfo[getPagesInfoIndex(startAddress + oldProgramm->size)];
+						newAfter->prevPageStartAddress = startAddress;
+					}
+				}
+				a = allocFrames(startAddress + oldProgramm->size - sizeToAllocAfter, startAddress + oldProgramm->size);
+				if(!a)
+				{
+					// unmap frames alloced before oldPrgramm
+					if(beforeCondition == 1 || beforeCondition == 2)
+					{
+						for(uint32 currentAddress = startAddress; currentAddress < va; currentAddress += PAGE_SIZE)
+						{
+							unmap_frame(ptr_page_directory, currentAddress);
+						}
+					}
+					return NULL;
+				}
+				after->size = 0;
+				after->prevPageStartAddress = 0;
+			}
+
+		}else{
+			void* vaResult = kmalloc(new_size);
+			if(vaResult == NULL)
+				return NULL;
+			kfree(virtual_address);
+			return vaResult;
+		}
 	}
-
-	// free frames
-
+	else{
+		// free Space From The programm
+		uint32 sizeToDelete = oldProgramm->size - new_size;
+		struct pageInfo *splitPoint;
+		splitPoint = &pagesInfo[getPagesInfoIndex(va + new_size)];
+	
+		struct pageInfo *after = &pagesInfo[getPagesInfoIndex(va + oldProgramm->size)];
+		if(after->isBlocked){
+			splitPoint->size = sizeToDelete;
+			splitPoint->prevPageStartAddress = va;
+			after->prevPageStartAddress = va + new_size;
+		}
+		else
+		{
+			if(va + oldProgramm->size == kheapPageAllocBreak)
+			{
+				kheapPageAllocBreak -= sizeToDelete;
+			}
+			else
+			{
+				splitPoint->size = sizeToDelete + after->size;
+				struct pageInfo *afterAfter = &pagesInfo[getPagesInfoIndex(va + oldProgramm->size + after->size)];
+				afterAfter ->prevPageStartAddress = va + new_size;
+				after->size = 0;
+				after->prevPageStartAddress = 0;
+			}
+		}
+	
+		for(uint32 currentAddress = va + new_size; currentAddress < va + oldProgramm->size; currentAddress += PAGE_SIZE){
+			unmap_frame(ptr_page_directory, currentAddress);
+		}
+	
+		oldProgramm->size -= sizeToDelete;
+		return (void *)va;
+	}
 
 	if (!lock_already_held)
 	{
@@ -507,9 +644,12 @@ bool allocFrames(uint32 start, uint32 end){
 		int ret = alloc_page(ptr_page_directory, currentAddress, PERM_WRITEABLE, 1);
 		if(ret != 0)
 		{
+			for(uint32 currentAddress2 = start; currentAddress2 < currentAddress; currentAddress2 += PAGE_SIZE)
+			{
+				unmap_frame(ptr_page_directory, currentAddress2);
+			}
 			return 0;
 		}
-		// cprintf("VA = %p\n", currentAddress);
 	}
 	return 1;
 }
