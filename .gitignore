@@ -2,7 +2,7 @@
 obj/
 *.img
 *.iso
-
+GNUmakefile
 *.log
 *.tmp
 .settings/language.settings.xml
