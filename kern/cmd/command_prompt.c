@@ -14,9 +14,9 @@ void run_command_prompt()
 {
 	if (__autograde__)
 	{
-		char cmdU1_2[BUFLEN] = "tst priorityRR 0";	//
-		char cmdU2_2[BUFLEN] = "tst priorityRR 1";	//
-		char cmdU3_2[BUFLEN] = "tst priorityRR 2";	//
+		char cmdU1_2[BUFLEN] = "tst priorityRR 0";
+		char cmdU2_2[BUFLEN] = "tst priorityRR 1";
+		char cmdU3_2[BUFLEN] = "tst priorityRR 2";
 //		execute_command(cmdU3_2);
 		__autograde__ = 0;
 	}

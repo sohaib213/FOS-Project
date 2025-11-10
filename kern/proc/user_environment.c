@@ -911,33 +911,50 @@ uint32 __cur_k_stk = KERNEL_HEAP_START;
 void* create_user_kern_stack(uint32* ptr_user_page_directory)
 {
 	//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #1 create_user_kern_stack
-	//Your code is here
-	//Comment the following line
-	//panic("create_user_kern_stack() is not implemented yet...!!");
-	uint32 PAGES;
-		uint32 Virtual_ad;
-		int perm = PERM_WRITEABLE;
-		PAGES = (KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE;
-		struct FrameInfo *Frame_arr[PAGES];
-		for(int i=0;i<PAGES;i++){
-			if (allocate_frame(&Frame_arr[i]) != 0) {
-			            for (int j=0; j<i;j++){
-			                free_frame(Frame_arr[j]);
-			            }
-			            panic("create_user_kern_stack: No enough memory!");
-			        }
-		}
-		for(int i=0;i<PAGES;i++){
-			Virtual_ad = KERN_STACK_TOP - (i + 1) * PAGE_SIZE;
-			map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
-		}
+	cprintf("Debug: Entered create_user_kern_stack()\n");
 
-		return (void*)(KERN_STACK_TOP - (PAGES + 1) * PAGE_SIZE);
+	uint32 PAGES;
+	uint32 Virtual_ad;
+	int perm = PERM_WRITEABLE;
+
+	// kernel stack
+	PAGES = (KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE;
+	cprintf("Debug: Kernel stack requires %d pages\n", PAGES);
+
+	struct FrameInfo *Frame_arr[PAGES];
+
+	// stack
+	for(int i=0; i<PAGES; i++){
+		cprintf("Debug: Allocating frame %d/%d\n", i+1, PAGES);
+		if (allocate_frame(&Frame_arr[i]) != 0) {
+			cprintf("Debug: Allocation failed at frame %d\n", i);
+
+			for (int j=0; j<i; j++){
+				free_frame(Frame_arr[j]);
+				cprintf("Debug: Freed frame %d\n", j);
+			}
+			panic("create_user_kern_stack: Not enough memory!");
+		}
+	}
+
+	//  mapping stack
+	for(int i=0; i<PAGES; i++){
+		Virtual_ad = KERN_STACK_TOP - (i + 1) * PAGE_SIZE;
+		cprintf("Debug: Mapping frame %d to virtual address 0x%x\n", i, Virtual_ad);
+		map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
+	}
+
+
+	void* stack_start = (void*)(KERN_STACK_TOP - PAGES * PAGE_SIZE);
+	cprintf("Debug: User kernel stack created. Start address (after guard page) = 0x%x\n", stack_start);
+
+	return stack_start;
 
 	//allocate space for the user kernel stack.
 	//remember to leave its bottom page as a GUARD PAGE (i.e. not mapped)
 	//return a pointer to the start of the allocated space (including the GUARD PAGE)
 }
+
 
 /*2024*/
 //===========================================================

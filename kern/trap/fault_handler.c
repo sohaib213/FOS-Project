@@ -166,39 +166,54 @@ void fault_handler(struct Trapframe *tf)
 			//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #2 Check for invalid pointers
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
-			int per=pt_get_page_permissions(faulted_env->env_page_directory,fault_va);
+			int per = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
 
-						if(fault_va>=KERNEL_BASE){
-							env_exit();
-							return;
-						}
-						else if(fault_va>=USER_HEAP_START && fault_va<USER_HEAP_MAX){
+			cprintf("Debug: Entered userTrap handler for va=%x, perms=%x, err=%x\n", fault_va, per, tf->tf_err);
 
-							if((per&PERM_UHPAGE)==0){
-								env_exit();
-								return;
-							}
-						}
+			// Check if fault address in kernel space
+			if (fault_va >= KERNEL_BASE) {
+				if (fault_va <(KERN_STACK_TOP - KERNEL_STACK_SIZE) || fault_va >= KERN_STACK_TOP) {
+				cprintf("Debug: Invalid access! fault_va in kernel space (va=%x)\n", fault_va);
+				env_exit();
+				return;
+			}}
+			// Check if inside user heap but not marked as UHPAGE
 
-						if ((tf->tf_err & FEC_WR) != 0) {
-						if((per&PERM_WRITEABLE)==0){
-						env_exit();
-						return;
-					}
-						}
+			else if (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX) {
+				cprintf("Debug: fault_va is inside user heap range.\n");
+				if ((per & PERM_UHPAGE) == 0) {
+					cprintf("Debug: Page not marked as UHPAGE! per=%x\n", per);
+					env_exit();
+					return;
+				}
+			}
 
+			// Check if it's a write fault but page is not writable
+			if ((tf->tf_err & FEC_WR) != 0) {
+				cprintf("Debug: Write fault detected for va=%x\n", fault_va);
+				if ((per & PERM_WRITEABLE) == 0) {
+					cprintf("Debug: Page not writeable! per=%x\n", per);
+					env_exit();
+					return;
+				}
+			}
+
+			cprintf("Debug: Passed all invalid pointer checks for va=%x\n", fault_va);
 			/*============================================================================================*/
 		}
 
-		/*2022: Check if fault due to Access Rights */
+		/* 2022: Check if fault due to Access Rights */
 		int perms = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
+		cprintf("Debug: Checking access rights violation for va=%x, perms=%x\n", fault_va, perms);
+
 		if (perms & PERM_PRESENT)
-			panic("Page @va=%x is exist! page fault due to violation of ACCESS RIGHTS\n", fault_va) ;
+			panic("Page @va=%x is exist! page fault due to violation of ACCESS RIGHTS\n", fault_va);
 		/*============================================================================================*/
 
-
 		// we have normal page fault =============================================================
-		faulted_env->pageFaultsCounter ++ ;
+		faulted_env->pageFaultsCounter++;
+		cprintf("Debug: Normal page fault occurred. Total faults = %d\n", faulted_env->pageFaultsCounter);
+
 
 //				cprintf("[%08s] user PAGE fault va %08x\n", faulted_env->prog_name, fault_va);
 //				cprintf("\nPage working set BEFORE fault handler...\n");
@@ -274,45 +289,70 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	int iWS =faulted_env->page_last_WS_index;
 	uint32 wsSize = env_page_ws_get_size(faulted_env);
 #endif
-	if(wsSize < (faulted_env->page_WS_max_size))
-	{
+
 		//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #3 placement
 		//Your code is here
 		//Comment the following line
 		//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
-		if(wsSize < (faulted_env->page_WS_max_size))
+	if (wsSize < (faulted_env->page_WS_max_size))
+	{
+		//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #3 placement
+		//Your code is here
+		cprintf("Debug: Entered PLACEMENT phase. wsSize=%d, wsMax=%d\n", wsSize, faulted_env->page_WS_max_size);
+
+		int permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
+		struct FrameInfo *poin_frameinfo;
+
+		cprintf("Debug: Allocating frame for fault_va=%x\n", fault_va);
+		int allocResult = allocate_frame(&poin_frameinfo);
+
+		if (allocResult != 0 || poin_frameinfo == NULL)
+		{
+			cprintf("Debug: Failed to allocate frame! allocResult=%d\n", allocResult);
+			env_exit();
+			return;
+		}
+
+		cprintf("Debug: Mapping frame to VA=%x with perms=%x\n", fault_va, permission);
+		map_frame(ptr_page_directory, poin_frameinfo, fault_va, permission);
+
+		cprintf("Debug: Reading page from Page File for VA=%x\n", fault_va);
+		int mkd = pf_read_env_page(faulted_env, (void *)fault_va);
+		cprintf("Debug: pf_read_env_page() returned %d\n", mkd);
+
+		if (mkd == E_PAGE_NOT_EXIST_IN_PF)
+		{
+			bool is_heap = (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX);
+			bool is_stack = (fault_va >= USTACKBOTTOM && fault_va < USTACKTOP);
+
+			cprintf("Debug: Page not found in Page File. is_heap=%d, is_stack=%d\n", is_heap, is_stack);
+
+			if (!is_heap && !is_stack)
 			{
-				//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #3 placement
-				//Your code is here
-				//Comment the following line
-				//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
-				int permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
-
-				struct FrameInfo *poin_frameinfo;
-				 allocate_frame(&poin_frameinfo);
-
-				 map_frame(ptr_page_directory,poin_frameinfo,fault_va,permission);
-
-
-				 int mkd = pf_read_env_page(faulted_env, (void *)fault_va);
-
-				 if(mkd==E_PAGE_NOT_EXIST_IN_PF){
-					 bool is_heap = (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX);
-					 bool is_stack = (fault_va >= USTACKBOTTOM && fault_va < USTACKTOP);
-
-					 if (!is_heap && !is_stack){
-						  env_exit();
-
-						  return;
-
-					  }
-
-				 }
-
-				 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
-				 LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
+				cprintf("Debug: Fault VA not heap/stack -> Exiting env.\n");
+				env_exit();
+				return;
 			}
+		}
+
+		cprintf("Debug: Creating WS element for VA=%x\n", fault_va);
+		struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
+
+		if (new_element == NULL)
+		{
+			cprintf("Debug: Failed to create WS element for VA=%x\n", fault_va);
+			env_exit();
+			return;
+		}
+
+		cprintf("Debug: Inserting new WS element at tail. WS size before insert=%d\n", wsSize);
+		LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
+		cprintf("Debug: WS element inserted successfully for VA=%x\n", fault_va);
+
+
 	}
+
+
 	else
 	{
 		if (isPageReplacmentAlgorithmOPTIMAL())

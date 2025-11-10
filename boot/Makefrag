@@ -29,4 +29,3 @@ $(OBJDIR)/boot/boot: $(BOOT_OBJS)
 	$(V)$(OBJDUMP) -S $@.out >$@.asm
 	$(V)$(OBJCOPY) -S -R ".eh_frame" -O binary $@.out $@
 	$(V)perl boot/sign.pl $(OBJDIR)/boot/boot
-
