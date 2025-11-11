@@ -91,8 +91,12 @@ void* kmalloc(unsigned int size)
 		unsigned int resultAddress = 0, lastAddress = 0;
 
 		int i = 0;
+		// cprintf("Before \n");
+		// cprintf("kheapPageAllocBreak = %p \n", kheapPageAllocBreak);
+		
 		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak;)
 		{
+			// cprintf("currentAddress = %p\n", currentAddress);
 			i++;
 			struct pageInfo *currentPageInfo = &pagesInfo[getPagesInfoIndex(currentAddress)];
 			if (!currentPageInfo->isBlocked) {
@@ -111,6 +115,7 @@ void* kmalloc(unsigned int size)
 			lastAddress = currentAddress;
 			currentAddress += currentPageInfo->size;
 		}
+		// cprintf("After \n");
 		if(resultAddress == 0)
 		{
 			if(maxSize != 0)
@@ -378,6 +383,8 @@ extern __inline__ uint32 get_block_size(void *va);
 
 void *krealloc(void *virtual_address, uint32 new_size)
 {
+	cprintf("kheapPageAllocBreak from krealloc = %p \n", kheapPageAllocBreak);
+
 	//TODO: [PROJECT'25.BONUS#2] KERNEL REALLOC - krealloc
 	//Your code is here
 	//Comment the following line
@@ -388,6 +395,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	{
 		acquire_kspinlock(&MemFrameLists.mfllock);
 	}
+	cprintf("Size = %d\n", new_size);
 	if(virtual_address == NULL)
 	{
 		return kmalloc(new_size);
@@ -396,7 +404,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	if(new_size == 0)
 	{
 		kfree(virtual_address);
-		return virtual_address;
+		return NULL;
 	}
 	
 	uint32 va = (uint32)virtual_address;
@@ -432,6 +440,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		free_block(virtual_address);
 		return vaRes;
 	}
+
 	va = ROUNDDOWN(va, PAGE_SIZE);
 	struct pageInfo *oldProgramm = &pagesInfo[getPagesInfoIndex(va)];
 	if(oldProgramm->size == 0)
@@ -444,15 +453,23 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	}
 	else if(new_size > oldProgramm->size)
 	{
+		// cprintf("Here 1\n");
 		// alloc more frames
 		uint32 sizeNeeded = new_size - oldProgramm->size;
 		uint32 sizeNeededWillNotBeChanged = sizeNeeded;
 		
-		struct pageInfo *before, *after;
+		struct pageInfo *before = NULL, *after = NULL;
+		// cprintf("va before = %p\n", va);
+		// cprintf("kheapPageAllocStart = %p\n", kheapPageAllocStart);
+
 		if(va != kheapPageAllocStart)
+		{
+			// cprintf("ENTERED\n"); 
 			before = &pagesInfo[getPagesInfoIndex(oldProgramm->prevPageStartAddress)];
+		}
 		if(va + oldProgramm->size != kheapPageAllocBreak)
 			after = &pagesInfo[getPagesInfoIndex(oldProgramm->size + va)];
+
 
 		uint8 beforeCondition = 0;
 		if(before != NULL)
@@ -467,6 +484,13 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				}
 				else
 				{
+					
+					cprintf("before address = %p\n", oldProgramm->prevPageStartAddress);
+					cprintf("before index = %d\n", getPagesInfoIndex(oldProgramm->prevPageStartAddress));
+					cprintf("va = %p\n", va);
+
+					cprintf("before size = %d\n", before->size);
+					cprintf("current size = %d\n", oldProgramm->size);
 					sizeNeeded -= before->size;
 					// merge the before node to current one
 					beforeCondition = 2;
@@ -494,12 +518,16 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				}
 			}
 		}
+		// cprintf("Here 4\n");
 		
 		if(after == NULL)
 		{
 			if(KERNEL_HEAP_MAX - kheapPageAllocBreak >= sizeNeeded)
 			{
+				// cprintf("Here 111\n");
+
 				kheapPageAllocBreak += sizeNeeded;
+				sizeToAllocAfter = sizeNeeded;
 				sizeNeeded = 0;
 				after = &pagesInfo[getPagesInfoIndex(kheapPageAllocBreak)];
 				after->size = sizeNeeded;
@@ -507,15 +535,21 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			}
 		}
 		
+		// cprintf("Here 5\n");
 
 		if(sizeNeeded == 0)
 		{
+			// cprintf("Here 6\n");
+
 			bool a;
 			uint32 startAddress = va;
 			if(beforeCondition == 1 || beforeCondition == 2)
 			{
+				// cprintf("Here 22\n");
 				if(beforeCondition == 1)
 				{
+				// cprintf("Here 33\n");
+
 					struct pageInfo* pageOnSplit = &pagesInfo[(getPagesInfoIndex(va - sizeNeededWillNotBeChanged))];
 					startAddress = va - sizeNeededWillNotBeChanged;
 					before->size -= sizeNeededWillNotBeChanged;
@@ -525,9 +559,13 @@ void *krealloc(void *virtual_address, uint32 new_size)
 					{
 						after -> prevPageStartAddress = startAddress;
 					}
+			// cprintf("Here 7\n");
+
 				}
 				else
 				{
+				// cprintf("Here 44\n");
+
 					startAddress = oldProgramm -> prevPageStartAddress;
 					before->size += oldProgramm->size;
 					before->isBlocked = 1;
@@ -551,8 +589,13 @@ void *krealloc(void *virtual_address, uint32 new_size)
 
 			if(afterCondition == 1 || afterCondition == 2)
 			{
+				// cprintf("Here 9\n");
+
 				struct pageInfo* newAfter;
+				cprintf("old Programm size before merge = %d\n", oldProgramm->size);
 				oldProgramm->size += sizeToAllocAfter;
+				cprintf("old Programm size after merge = %d\n", oldProgramm->size);
+
 
 				if(afterCondition == 1)
 				{
@@ -585,6 +628,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				after->prevPageStartAddress = 0;
 			}
 
+			return (void *)startAddress;
 		}else{
 			void* vaResult = kmalloc(new_size);
 			if(vaResult == NULL)
@@ -596,6 +640,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	else{
 		// free Space From The programm
 		uint32 sizeToDelete = oldProgramm->size - new_size;
+		cprintf("sizeToDelete = %d\n", sizeToDelete);
 		struct pageInfo *splitPoint;
 		splitPoint = &pagesInfo[getPagesInfoIndex(va + new_size)];
 	
@@ -609,7 +654,10 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		{
 			if(va + oldProgramm->size == kheapPageAllocBreak)
 			{
+				cprintf("break before decreament = %p\n", kheapPageAllocBreak);
 				kheapPageAllocBreak -= sizeToDelete;
+				cprintf("break after decreament = %p\n", kheapPageAllocBreak);
+
 			}
 			else
 			{
@@ -634,6 +682,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		release_kspinlock(&MemFrameLists.mfllock);
 	}
 
+		// cprintf("Here 8\n");
 	return NULL;
 }
 
