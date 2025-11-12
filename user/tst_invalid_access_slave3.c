@@ -6,6 +6,8 @@
 
 void _main(void)
 {
+	cprintf("SLAVE 3\n");
+
 	//[1] Non=reserved User Heap
 	uint32 *ptr = (uint32*)(USER_HEAP_START + DYN_ALLOC_MAX_SIZE + PAGE_SIZE);
 	*ptr = 100 ;

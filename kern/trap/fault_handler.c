@@ -282,6 +282,7 @@ int get_optimal_num_faults(struct WS_List *initWorkingSet, int maxWSSize, struct
 
 void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 {
+	cprintf("11\n");
 #if USE_KHEAP
 	struct WorkingSetElement *victimWSElement = NULL;
 	uint32 wsSize = LIST_SIZE(&(faulted_env->page_WS_list));
@@ -289,6 +290,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	int iWS =faulted_env->page_last_WS_index;
 	uint32 wsSize = env_page_ws_get_size(faulted_env);
 #endif
+	cprintf("22\n");
 
 		//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #3 placement
 		//Your code is here
@@ -296,6 +298,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
 	if (wsSize < (faulted_env->page_WS_max_size))
 	{
+		cprintf("3\n");
+
 		//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #3 placement
 		//Your code is here
 		cprintf("Debug: Entered PLACEMENT phase. wsSize=%d, wsMax=%d\n", wsSize, faulted_env->page_WS_max_size);
@@ -351,8 +355,6 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 
 
 	}
-
-
 	else
 	{
 		if (isPageReplacmentAlgorithmOPTIMAL())

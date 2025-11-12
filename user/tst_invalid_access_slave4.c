@@ -6,6 +6,8 @@
 
 void _main(void)
 {
+	cprintf("SLAVE 4\n");
+
 	//[4] Not in Page File, Not Stack & Not Heap
 	uint32 kilo = 1024;
 	{
