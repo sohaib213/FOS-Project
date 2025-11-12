@@ -64,6 +64,7 @@ inline int pt_get_page_permissions(uint32* directory, uint32 virtual_address )
 
 		return permissions;
 	}
+	return 0;
 }
 
 //===============================
