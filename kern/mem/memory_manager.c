@@ -242,11 +242,14 @@ int get_page_table(uint32 *ptr_page_directory, const uint32 virtual_address, uin
 		//	cprintf("gpt .07, page_directory_entry= %x \n",page_directory_entry);
 		if(USE_KHEAP && !CHECK_IF_KERNEL_ADDRESS(virtual_address))
 		{
+			// cprintf("enter if\n");
 			*ptr_page_table = (void *)kheap_virtual_address(EXTRACT_ADDRESS(page_directory_entry)) ;
 			//cprintf("===>get_page_table: page_dir_entry = %x ptr_page_table = %x\n", page_directory_entry,*ptr_page_table);
 		}
 		else
 		{
+			// cprintf("enter else\n");
+
 			*ptr_page_table = STATIC_KERNEL_VIRTUAL_ADDRESS(EXTRACT_ADDRESS(page_directory_entry)) ;
 		}
 		return TABLE_IN_MEMORY;
@@ -406,7 +409,7 @@ int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint
 
 	}*/
 
-	cprintf("Iam Here\n");
+	// cprintf("Iam Here\n");
 	/*NEW'15 CORRECT SOLUTION*/
 	//If already mapped
 	if ((page_table_entry & PERM_PRESENT) == PERM_PRESENT)
@@ -425,7 +428,7 @@ int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint
 	 * map_frame(): KEEP THE VALUES OF THE AVAILABLE BITS*/
 	uint32 pte_available_bits = ptr_page_table[PTX(virtual_address)] & PERM_AVAILABLE;
 	ptr_page_table[PTX(virtual_address)] = CONSTRUCT_ENTRY(physical_address , pte_available_bits | perm | PERM_PRESENT);
-	cprintf("OutPut Entery = %p\n", ptr_page_table[PTX(virtual_address)]);
+	// cprintf("OutPut Entery = %p\n", ptr_page_table[PTX(virtual_address)]);
 	/*********************************************************************************/
 
 	return 0;

@@ -166,14 +166,14 @@ void fault_handler(struct Trapframe *tf)
 			//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #2 Check for invalid pointers
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
-			int per = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
+			uint32 per = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
 
-			cprintf("Debug: Entered userTrap handler for va=%x, perms=%x, err=%x\n", fault_va, per, tf->tf_err);
+			cprintf("Debug: Entered userTrap handler for va=%p, perms=%p, err=%p\n", fault_va, per, tf->tf_err);
 
 			// Check if fault address in kernel space
 			if (fault_va >= KERNEL_BASE) {
 				if (fault_va <(KERN_STACK_TOP - KERNEL_STACK_SIZE) || fault_va >= KERN_STACK_TOP) {
-				cprintf("Debug: Invalid access! fault_va in kernel space (va=%x)\n", fault_va);
+				cprintf("Debug: Invalid access! fault_va in kernel space (va=%p)\n", fault_va);
 				env_exit();
 				return;
 			}}
@@ -188,6 +188,7 @@ void fault_handler(struct Trapframe *tf)
 				}
 			}
 
+			
 			// Check if it's a write fault but page is not writable
 			if ((tf->tf_err & FEC_WR) != 0) {
 				cprintf("Debug: Write fault detected for va=%x\n", fault_va);
@@ -304,23 +305,28 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		//Your code is here
 		cprintf("Debug: Entered PLACEMENT phase. wsSize=%d, wsMax=%d\n", wsSize, faulted_env->page_WS_max_size);
 
-		int permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
-		struct FrameInfo *poin_frameinfo;
+		uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
 
-		cprintf("Debug: Allocating frame for fault_va=%x\n", fault_va);
-		int allocResult = allocate_frame(&poin_frameinfo);
+		// cprintf("Debug: Allocating frame for fault_va=%x\n", fault_va);
+		// int allocResult = allocate_frame(&poin_frameinfo);
 
-		if (allocResult != 0 || poin_frameinfo == NULL)
+		// if (allocResult != 0 || poin_frameinfo == NULL)
+		// {
+		// 	cprintf("Debug: Failed to allocate frame! allocResult=%d\n", allocResult);
+		// 	env_exit();
+		// 	return;
+		// }
+
+		cprintf("Debug: Mapping frame to VA=%p with perms=%x\n", fault_va, permission);
+		// map_frame(faulted_env->env_page_directory, poin_frameinfo, fault_va, permission);
+		int allocResult = alloc_page(faulted_env->env_page_directory, fault_va, permission, 0);
+		if (allocResult != 0)
 		{
 			cprintf("Debug: Failed to allocate frame! allocResult=%d\n", allocResult);
 			env_exit();
 			return;
 		}
-
-		cprintf("Debug: Mapping frame to VA=%x with perms=%x\n", fault_va, permission);
-		map_frame(ptr_page_directory, poin_frameinfo, fault_va, permission);
-
-		cprintf("Debug: Reading page from Page File for VA=%x\n", fault_va);
+		cprintf("Debug: Reading page from Page File for VA=%p\n", fault_va);
 		int mkd = pf_read_env_page(faulted_env, (void *)fault_va);
 		cprintf("Debug: pf_read_env_page() returned %d\n", mkd);
 

@@ -108,7 +108,7 @@ void env_init(void)
 // Allocates a new env and loads the named user program into it.
 struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsigned int LRU_second_list_size, unsigned int percent_WS_pages_to_remove)
 {
-	cprintf("Programm name : %s\n", user_program_name);
+	// cprintf("Programm name : %s\n", user_program_name);
 
 	//[0] 2024: Disable the interrupt through the entire function to avoid concurrency issues while:
 	//		1. switching the directories
@@ -190,9 +190,9 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 		else
 			e->percentage_of_WS_pages_to_be_removed = percent_WS_pages_to_remove;
 
-		cprintf("To initalize \n");
+		// cprintf("To initalize \n");
 		initialize_environment(e, ptr_user_page_directory, phys_user_page_directory);
-		cprintf("DONE initalize \n");
+		// cprintf("DONE initalize \n");
 
 		// We want to load the program into the user virtual space
 		// each program is constructed from one or more segments,
@@ -213,11 +213,11 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 		uint32 remaining_ws_pages = (e->page_WS_max_size)-1; // we are reserving 1 page of WS for the stack that will be allocated just before the end of this function
 		uint32 lastTableNumber=0xffffffff;
 
-		cprintf("111 \n");
+		// cprintf("111 \n");
 
 		PROGRAM_SEGMENT_FOREACH(seg, ptr_program_start)
 		{
-			cprintf("a\n");
+			// cprintf("a\n");
 			segment_counter++;
 			/// 7.1) allocate space for current program segment and map it at seg->virtual_address then copy its content
 			// from seg->ptr_start to seg->virtual_address
@@ -229,7 +229,7 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 					seg->size_in_memory, seg->virtual_address));
 			LOG_STRING("===============================================================================");
 
-			cprintf("b\n");
+			// cprintf("b\n");
 
 			uint32 allocated_pages=0;
 			program_segment_alloc_map_copy_workingset(e, seg, &allocated_pages, remaining_ws_pages, &lastTableNumber);
@@ -237,7 +237,7 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 			remaining_ws_pages -= allocated_pages;
 			LOG_STATMENT(cprintf("SEGMENT: allocated pages in WS = %d",allocated_pages));
 			LOG_STATMENT(cprintf("SEGMENT: remaining WS pages after allocation = %d",remaining_ws_pages));
-			cprintf("c\n");
+			// cprintf("c\n");
 
 
 			/// 7.2) temporary initialize 1st page in memory then writing it on page file
@@ -248,7 +248,7 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 			uint32 end_first_page = ROUNDUP(seg_va , PAGE_SIZE);
 			uint32 offset_first_page = seg_va  - start_first_page ;
 
-			cprintf("d\n");
+			// cprintf("d\n");
 
 			uint8 *src_ptr =  (uint8*) dataSrc_va;
 			uint8 *dst_ptr =  (uint8*) (ptr_temp_page + offset_first_page);
@@ -268,16 +268,16 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 			}
 
 			/// 7.3) Start writing the segment ,from 2nd page until before last page, to page file ...
-			cprintf("e\n");
+			// cprintf("e\n");
 
 			uint32 start_last_page = ROUNDDOWN(seg_va  + seg->size_in_file, PAGE_SIZE) ;
 			uint32 end_last_page = seg_va  + seg->size_in_file;
 
-			cprintf("end_first_page = %p\n", end_first_page);
-			cprintf("start_last_page = %p\n", start_last_page);
+			// cprintf("end_first_page = %p\n", end_first_page);
+			// cprintf("start_last_page = %p\n", start_last_page);
 			for (i = end_first_page ; i < start_last_page ; i+= PAGE_SIZE, src_ptr+= PAGE_SIZE)
 			{
-				cprintf("ENTERED FOR\n");
+				// cprintf("ENTERED FOR\n");
 				if (pf_add_env_page(e, i, src_ptr) == E_NO_PAGE_FILE_SPACE)
 					panic("ERROR: Page File OUT OF SPACE. can't load the program in Page file!!");
 
@@ -286,7 +286,7 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 
 			/// 7.4) temporary initialize last page in memory then writing it on page file
 
-			cprintf("f\n");
+			// cprintf("f\n");
 
 			dst_ptr =  (uint8*) ptr_temp_page;
 			memset(dst_ptr, 0, PAGE_SIZE);
@@ -305,20 +305,20 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 
 			uint32 start_remaining_area = ROUNDUP(seg_va + seg->size_in_file,PAGE_SIZE) ;
 			uint32 remainingLength = (seg_va + seg->size_in_memory) - start_remaining_area ;
-			cprintf("g\n");
+			// cprintf("g\n");
 
 			for (i=0 ; i < ROUNDUP(remainingLength,PAGE_SIZE) ;i+= PAGE_SIZE, start_remaining_area += PAGE_SIZE)
 			{
 				if (pf_add_empty_env_page(e, start_remaining_area, 1) == E_NO_PAGE_FILE_SPACE)
 					panic("ERROR: Page File OUT OF SPACE. can't load the program in Page file!!");
 			}
-			cprintf("h\n");
+			// cprintf("h\n");
 
 			//LOG_STRING(" -------------------- PAGE FILE: segment remaining area is written (the zeros) ");
 		}
 
 
-		cprintf("222 \n");
+		// cprintf("222 \n");
 
 		///[8] Clear the modified bit of each page in the pageWorkingSet to indicate it's a clean version
 #if USE_KHEAP
@@ -473,7 +473,7 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 		//	cprintf("Table working set after loading the program...\n");
 		//	env_table_ws_print(e);
 	}
-		cprintf("FINISHED HERE \n");
+		// cprintf("FINISHED HERE \n");
 
 	return e;
 }
@@ -945,23 +945,23 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 
 	// kernel stack
 	PAGES = KERNEL_STACK_SIZE / PAGE_SIZE;
-	cprintf("Debug: Kernel stack requires %d pages\n", PAGES);
+	// cprintf("Debug: Kernel stack requires %d pages\n", PAGES);
 
 
-	cprintf("KERNEL STACK TOP = %p\n", KERN_STACK_TOP);
+	// cprintf("KERNEL STACK TOP = %p\n", KERN_STACK_TOP);
 	//  mapping stack
 	for(int i = 0; i < PAGES; i++){
 		Virtual_ad = KERN_STACK_TOP - (i + 1) * PAGE_SIZE;
-		cprintf("Debug: Mapping frame %d to virtual address %p\n", i, Virtual_ad);
+		// cprintf("Debug: Mapping frame %d to virtual address %p\n", i, Virtual_ad);
 		// map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
 		alloc_page(ptr_user_page_directory, Virtual_ad, perm, 1);
 	}
 	uint32* ptr_table ;
 	uint32 ret =  get_page_table(ptr_user_page_directory, Virtual_ad, &ptr_table);
 	uint32 index_page_table = PTX(Virtual_ad);
-	cprintf("table Enter before = %p\n", ptr_table[index_page_table]);
+	// cprintf("table Enter before = %p\n", ptr_table[index_page_table]);
 	ptr_table[index_page_table] = (ptr_table[index_page_table]) &(0xFFFFFFFE);
-	cprintf("table Enter after = %p\n", ptr_table[index_page_table]);
+	// cprintf("table Enter after = %p\n", ptr_table[index_page_table]);
 
 	
 
@@ -1041,7 +1041,7 @@ void initialize_environment(struct Env* e, uint32* ptr_user_page_directory, unsi
 
 		//[2] Leave room for the trap frame
 		void* sp = e->kstack + KERNEL_STACK_SIZE;
-		cprintf("KRNSSADDR = %p\n", (uint32)sp);
+		// cprintf("KRNSSADDR = %p\n", (uint32)sp);
 		sp -= sizeof(struct Trapframe);
 		e->env_tf = (struct Trapframe *) sp;
 
@@ -1053,11 +1053,11 @@ void initialize_environment(struct Env* e, uint32* ptr_user_page_directory, unsi
 		e->context = (struct Context *) sp;
 
 		//[4] Setup the context to return to env_start() at the early first run from the scheduler
-		cprintf("START\n");
+		// cprintf("START\n");
 		
 		memset(e->context, 0, sizeof(*(e->context)));
 		e->context->eip = (uint32) (env_start);
-		cprintf("END\n");
+		// cprintf("END\n");
 
 	}
 

@@ -260,6 +260,7 @@ static void trap_dispatch(struct Trapframe *tf)
 			//env_table_ws_print(curenv) ;
 			update_WS_time_stamps();
 		}
+		cprintf("SF\n");
 		fault_handler(tf);
 	}
 	else if (tf->tf_trapno == T_SYSCALL)
@@ -314,6 +315,7 @@ static void trap_dispatch(struct Trapframe *tf)
 
 void trap(struct Trapframe *tf)
 {
+	// cprintf("he\n");
 	//[1] Stop the clock
 	/* to avoid counting down on the current process while handling exceptions
 	 * This avoid pending clock interrupt after returning from the trap.
@@ -360,7 +362,10 @@ void trap(struct Trapframe *tf)
 	}
 	else
 	{
+		// cprintf("befor enter dispatch\n");
 		trap_dispatch(tf);
+		// cprintf("after entered\n");
+
 	}
 
 	//cprintf("will be returned to the trapret() \n");
@@ -370,7 +375,7 @@ void trap(struct Trapframe *tf)
 	uint32 IEN = read_eflags() & FL_IF;
 	assert(IEN == 0);
 
-	//cprintf("will resume the clock\n");
+	// cprintf("will resume the clock\n");
 
 	//[5] Resume the clock
 	kclock_resume();

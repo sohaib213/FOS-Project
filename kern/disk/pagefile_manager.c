@@ -238,16 +238,16 @@ int pf_add_empty_env_page( struct Env* ptr_env, uint32 virtual_address, uint8 in
 
 int pf_add_env_page( struct Env* ptr_env, uint32 virtual_address, void* dataSrc)
 {
-	cprintf("AA\n");
+	// cprintf("AA\n");
 	//LOG_STRING("========================== create_env_page");
 	uint32 *ptr_disk_page_table;
 	assert((uint32)virtual_address < KERNEL_BASE);
 
 	get_disk_page_directory(ptr_env, &(ptr_env->disk_env_pgdir)) ;
-	cprintf("BB\n");
+	// cprintf("BB\n");
 
 	get_disk_page_table(ptr_env->disk_env_pgdir,  virtual_address, 1, &ptr_disk_page_table) ;
-	cprintf("CC\n");
+	// cprintf("CC\n");
 
 	uint32 dfn=ptr_disk_page_table[PTX(virtual_address)];
 	if( dfn == 0)
@@ -255,7 +255,7 @@ int pf_add_env_page( struct Env* ptr_env, uint32 virtual_address, void* dataSrc)
 		if( allocate_disk_frame(&dfn) == E_NO_PAGE_FILE_SPACE) return E_NO_PAGE_FILE_SPACE;
 		ptr_disk_page_table[PTX(virtual_address)] = dfn;
 	}
-	cprintf("DD\n");
+	// cprintf("DD\n");
 
 	//TODOObsolete: we should here lcr3 with the env pgdir to make sure that dataSrc is not read mistakenly
 	// from another env directory
@@ -268,7 +268,7 @@ int pf_add_env_page( struct Env* ptr_env, uint32 virtual_address, void* dataSrc)
 	//	lcr3(oldDir);
 
 	int ret = write_disk_page(dfn, (void*)dataSrc);
-	cprintf("EE\n");
+	// cprintf("EE\n");
 
 	return ret;
 }
