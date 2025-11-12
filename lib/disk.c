@@ -139,7 +139,7 @@ int ide_write(uint32 secno, const void *src, uint32 nsecs)
 {
 	int r;
 
-	cprintf("12\n");
+	// cprintf("12\n");
 
 	//LOG_STATMENT(cprintf("1 ==> nsecs = %d\n",nsecs);)
 	assert(nsecs <= 256);
@@ -147,7 +147,7 @@ int ide_write(uint32 secno, const void *src, uint32 nsecs)
 	struct Env* e = get_cpu_proc();
 	if (e) LOG_STATMENT(cprintf("ide_write: %d before CS\n", e->env_id););
 
-	cprintf("13\n");
+	// cprintf("13\n");
 
 	/*Critical Section to ensure that the entire read/write will be completely finished*/
 #if DISK_IO_METHOD == INT_SLEEP
@@ -157,10 +157,10 @@ int ide_write(uint32 secno, const void *src, uint32 nsecs)
 #endif
 	{
 		if (e) LOG_STATMENT(cprintf("ide_write: %d inside CS\n", e->env_id););
-		cprintf("14\n");
+		// cprintf("14\n");
 
 		ide_wait_ready(0);
-		cprintf("15\n");
+		// cprintf("15\n");
 
 		//LOG_STATMENT(cprintf("3 ==> nsecs = %d\n",nsecs);)
 		outb(0x1F2, nsecs);
@@ -169,11 +169,10 @@ int ide_write(uint32 secno, const void *src, uint32 nsecs)
 		outb(0x1F5, (secno >> 16) & 0xFF);
 		outb(0x1F6, 0xE0 | ((diskno&1)<<4) | ((secno>>24)&0x0F));
 		outb(0x1F7, 0x30);	// CMD 0x30 means write sector
-		cprintf("16\n");
+		// cprintf("16\n");
 
 
 		for (; nsecs > 0; nsecs--, src += SECTSIZE) {
-			cprintf("before neecs = %d\n", nsecs);
 			if ((r = ide_wait_ready(1)) < 0)
 			{
 				panic("FAILURE to write %d sectors to disk\n",nsecs);
@@ -186,10 +185,9 @@ int ide_write(uint32 secno, const void *src, uint32 nsecs)
 				outsl(0x1F0, src, SECTSIZE/4);
 				//LOG_STATMENT(cprintf("written %d sectors to disk successfully\n",nsecs););
 			}
-			cprintf("after neecs = %d\n", nsecs);
 
 		}
-		cprintf("17\n");
+		// cprintf("17\n");
 
 	}
 #if DISK_IO_METHOD == INT_SLEEP

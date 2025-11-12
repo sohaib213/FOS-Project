@@ -53,7 +53,17 @@ inline int pt_get_page_permissions(uint32* directory, uint32 virtual_address )
 {
 	//TODO: PRACTICE: fill this function.
 	//Comment the following line
-	panic("pt_get_page_permissions() is not implemented yet!");
+	// panic("pt_get_page_permissions() is not implemented yet!");
+	uint32* ptr_table ;
+	uint32 ret =  get_page_table(ptr_page_directory, virtual_address, &ptr_table) ;
+	if(ptr_table != NULL)
+	{
+		uint32 index_page_table = PTX(virtual_address);
+		uint32 page_table_entry = ptr_table[index_page_table];
+		uint32 permissions = page_table_entry & 0xFFF;
+
+		return permissions;
+	}
 }
 
 //===============================
@@ -134,6 +144,7 @@ inline int alloc_page(uint32* directory, uint32 va, uint32 perms, bool set_to_ze
 	uint32* ptr_table ;
 	struct FrameInfo* ptr_fi = get_frame_info(directory, va, &ptr_table);
 	if (ptr_fi != NULL) {
+		cprintf("address = %p\n", ptr_fi->virtual_address);
 		return 1;
 	}
 	else {

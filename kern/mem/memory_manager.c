@@ -355,6 +355,7 @@ void __static_cpt(uint32 *ptr_directory, const uint32 virtual_address, uint32 **
 //
 int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint32 virtual_address, int perm)
 {
+	// cprintf("lets go\n");
 	// Fill this function in
 	uint32 physical_address = to_physical_address(ptr_frame_info);
 	uint32 *ptr_page_table;
@@ -405,6 +406,7 @@ int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint
 
 	}*/
 
+	cprintf("Iam Here\n");
 	/*NEW'15 CORRECT SOLUTION*/
 	//If already mapped
 	if ((page_table_entry & PERM_PRESENT) == PERM_PRESENT)
@@ -423,6 +425,7 @@ int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint
 	 * map_frame(): KEEP THE VALUES OF THE AVAILABLE BITS*/
 	uint32 pte_available_bits = ptr_page_table[PTX(virtual_address)] & PERM_AVAILABLE;
 	ptr_page_table[PTX(virtual_address)] = CONSTRUCT_ENTRY(physical_address , pte_available_bits | perm | PERM_PRESENT);
+	cprintf("OutPut Entery = %p\n", ptr_page_table[PTX(virtual_address)]);
 	/*********************************************************************************/
 
 	return 0;

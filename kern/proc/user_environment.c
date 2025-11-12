@@ -948,23 +948,27 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	cprintf("Debug: Kernel stack requires %d pages\n", PAGES);
 
 
-	cprintf("KERNEL STACK TOP = %p\n", KERN_STACK_TOP);
+	cprintf("KERNEL STACK TOP = %p\n", __cur_k_stk);
 	//  mapping stack
-	for(int i = 0; i < PAGES - 1; i++){
-		Virtual_ad = KERN_STACK_TOP - (i + 1) * PAGE_SIZE;
+	for(int i = 0; i < PAGES; i++){
+		Virtual_ad = __cur_k_stk - (i + 1) * PAGE_SIZE;
 		cprintf("Debug: Mapping frame %d to virtual address %p\n", i, Virtual_ad);
 		// map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
-		alloc_page(ptr_user_page_directory, Virtual_ad, perm, 1);
+		int ret = alloc_page(ptr_user_page_directory, Virtual_ad, perm, 1);
+		cprintf("ret = %d\n", ret);
 	}
-
 	uint32* ptr_table ;
-	struct FrameInfo* ptr_fi = get_frame_info(ptr_user_page_directory, KERN_STACK_TOP - PAGES, &ptr_table);
-	int ret = allocate_frame(&ptr_fi);
-	
+	uint32 ret =  get_page_table(ptr_user_page_directory, Virtual_ad, &ptr_table);
+	uint32 index_page_table = PTX(Virtual_ad);
+	cprintf("table Enter before = %p\n", ptr_table[index_page_table]);
+	ptr_table[index_page_table] = (ptr_table[index_page_table]) &(0xFFFFFFFE);
+	cprintf("table Enter after = %p\n", ptr_table[index_page_table]);
+
+	__cur_k_stk -= KERNEL_STACK_SIZE;
 
 	cprintf("Debug: User kernel stack created. Start address (after guard page) = 0x%x\n", Virtual_ad - PAGE_SIZE);
 
-	return (void *)(Virtual_ad - PAGE_SIZE);
+	return (void *)(Virtual_ad);
 
 	//allocate space for the user kernel stack.
 	//remember to leave its bottom page as a GUARD PAGE (i.e. not mapped)
