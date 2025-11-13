@@ -142,6 +142,7 @@ fos_scheduler(void)
 				break;
 			}
 		}
+		// cprintf("FOS-SCHED\n");
 		release_kspinlock(&ProcessQueues.qlock);  //release lock: to protect ready & blocked Qs in multi-CPU
 		//cprintf("\n[FOS_SCHEDULER] release: lock status after = %d\n", qlock.locked);
 	} while (is_any_blocked > 0);

@@ -260,7 +260,7 @@ static void trap_dispatch(struct Trapframe *tf)
 			//env_table_ws_print(curenv) ;
 			update_WS_time_stamps();
 		}
-		cprintf("SF\n");
+		// cprintf("SF\n");
 		fault_handler(tf);
 	}
 	else if (tf->tf_trapno == T_SYSCALL)

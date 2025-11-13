@@ -350,7 +350,7 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 		}
 #endif
 
-		cprintf("333 \n");
+		// cprintf("333 \n");
 
 		//[9] now set the entry point of the environment
 		set_environment_entry_point(e, ptr_user_program_info->ptr_start);
@@ -950,24 +950,24 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 
 	// cprintf("KERNEL STACK TOP = %p\n", KERN_STACK_TOP);
 	//  mapping stack
-	for(int i = 0; i < PAGES; i++){
-		Virtual_ad = KERN_STACK_TOP - (i + 1) * PAGE_SIZE;
+	for(int i = 0; i < PAGES - 1; i++){
+		Virtual_ad = __cur_k_stk - (i + 1) * PAGE_SIZE;
 		// cprintf("Debug: Mapping frame %d to virtual address %p\n", i, Virtual_ad);
 		// map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
 		alloc_page(ptr_user_page_directory, Virtual_ad, perm, 1);
 	}
-	uint32* ptr_table ;
-	uint32 ret =  get_page_table(ptr_user_page_directory, Virtual_ad, &ptr_table);
-	uint32 index_page_table = PTX(Virtual_ad);
+	// uint32* ptr_table ;
+	// uint32 ret =  get_page_table(ptr_user_page_directory, Virtual_ad, &ptr_table);
+	// uint32 index_page_table = PTX(Virtual_ad);
 	// cprintf("table Enter before = %p\n", ptr_table[index_page_table]);
-	ptr_table[index_page_table] = (ptr_table[index_page_table]) &(0xFFFFFFFE);
+	// ptr_table[index_page_table] = (ptr_table[index_page_table]) &(0xFFFFFFFE);
 	// cprintf("table Enter after = %p\n", ptr_table[index_page_table]);
 
 	
 
 	cprintf("Debug: User kernel stack created. Start address (after guard page) = 0x%x\n", Virtual_ad - PAGE_SIZE);
-
-	return (void *)(Virtual_ad);
+	__cur_k_stk -= KERNEL_STACK_SIZE;
+	return (void *)(__cur_k_stk);
 
 	//allocate space for the user kernel stack.
 	//remember to leave its bottom page as a GUARD PAGE (i.e. not mapped)
@@ -1057,15 +1057,17 @@ void initialize_environment(struct Env* e, uint32* ptr_user_page_directory, unsi
 		
 		memset(e->context, 0, sizeof(*(e->context)));
 		e->context->eip = (uint32) (env_start);
-		// cprintf("END\n");
+		cprintf("END CREATING\n");
 
 	}
 
 	// Allocate the page working set
 #if USE_KHEAP == 1
 	{
+		cprintf("BEFORE 1\n");
 		LIST_INIT(&(e->page_WS_list));
 		LIST_INIT(&(e->referenceStreamList));
+		cprintf("AFTER 1\n");
 	}
 #else
 	{

@@ -56,7 +56,7 @@ inline int pt_get_page_permissions(uint32* directory, uint32 virtual_address )
 	// panic("pt_get_page_permissions() is not implemented yet!");
 	uint32* ptr_table ;
 	uint32 ret =  get_page_table(directory, virtual_address, &ptr_table);
-	cprintf("ret = %d\n", ret);
+	// cprintf("ret = %d\n", ret);
 	if(ptr_table != NULL)
 	{
 		// cprintf("VA = %p\n", virtual_address);
