@@ -12,7 +12,6 @@ uint32 expectedInitialVAs[15] = {
 
 void _main(void)
 {
-	cprintf("HERE\n");
 #if USE_KHEAP
 	//	cprintf_colored(TEXT_cyan,"envID = %d\n",envID);
 
