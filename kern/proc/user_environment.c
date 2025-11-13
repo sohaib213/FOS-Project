@@ -963,7 +963,7 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	// ptr_table[index_page_table] = (ptr_table[index_page_table]) &(0xFFFFFFFE);
 	// cprintf("table Enter after = %p\n", ptr_table[index_page_table]);
 
-	
+
 
 	cprintf("Debug: User kernel stack created. Start address (after guard page) = 0x%x\n", Virtual_ad - PAGE_SIZE);
 	__cur_k_stk -= KERNEL_STACK_SIZE;

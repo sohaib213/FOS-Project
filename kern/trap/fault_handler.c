@@ -168,36 +168,31 @@ void fault_handler(struct Trapframe *tf)
 			//your code is here
 			int per = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
 
+			bool present = per & PERM_PRESENT;
+			bool write   = per & PERM_WRITEABLE;
+			bool user    = per & PERM_UHPAGE;
+
 			cprintf("Debug: Entered userTrap handler for va=%p, perms=%p, err=%p\n", fault_va, per, tf->tf_err);
 
 			// Check if fault address in kernel space
-			if (fault_va >= USER_LIMIT) {
+			if (fault_va >= KERNEL_BASE) {
+
 				cprintf("Debug: Invalid access! fault_va in kernel space (va=%p)\n", fault_va);
 				env_exit();
-				return;
 			}
-			// Check if inside user heap but not marked as UHPAGE
+			// Check if inside user heap but unmarked
 
-			else if (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX) {
-				cprintf("Debug: fault_va is inside user heap range.\n");
-				if ((per & PERM_UHPAGE) == 0) {
-					cprintf("Debug: Page not marked as UHPAGE! per=%x\n", per);
-					env_exit();
-					return;
-				}
-			}
+			if (!present && user) {
+			            cprintf("Invalid pointer: unmapped page at %x\n", fault_va);
+			            env_exit();
+			    }
 
 			
 			// Check if it's a write fault but page is not writable
-			if ((tf->tf_err & FEC_WR) != 0) {
-				cprintf("Debug: Write fault detected for va=%x\n", fault_va);
-				if ((per & PERM_WRITEABLE) == 0) {
-					cprintf("Debug: Page not writeable! per=%x\n", per);
-					env_exit();
-					return;
-				}
-			}
-
+			if (present && !write) {
+			            cprintf("Invalid pointer: write to read-only page at %x\n", fault_va);
+			            env_exit();
+			    }
 			cprintf("Debug: Passed all invalid pointer checks for va=%x\n", fault_va);
 			/*============================================================================================*/
 		}
