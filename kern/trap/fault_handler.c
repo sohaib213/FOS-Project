@@ -175,24 +175,26 @@ void fault_handler(struct Trapframe *tf)
 			cprintf("Debug: Entered userTrap handler for va=%p, perms=%p, err=%p\n", fault_va, per, tf->tf_err);
 
 			// Check if fault address in kernel space
-			if (fault_va >= KERNEL_BASE) {
-
+			if (fault_va >= USER_LIMIT) {
 				cprintf("Debug: Invalid access! fault_va in kernel space (va=%p)\n", fault_va);
 				env_exit();
+				return;
 			}
 			// Check if inside user heap but unmarked
 
-			if (!present && user) {
-			            cprintf("Invalid pointer: unmapped page at %x\n", fault_va);
-			            env_exit();
-			    }
+			if (present && !user) {
+				cprintf("Invalid pointer: unmapped page at %x\n", fault_va);
+				env_exit();
+				return;
+			}
 
 			
 			// Check if it's a write fault but page is not writable
 			if (present && !write) {
-			            cprintf("Invalid pointer: write to read-only page at %x\n", fault_va);
-			            env_exit();
-			    }
+				cprintf("Invalid pointer: write to read-only page at %x\n", fault_va);
+				env_exit();
+				return;
+			}
 			cprintf("Debug: Passed all invalid pointer checks for va=%x\n", fault_va);
 			/*============================================================================================*/
 		}
