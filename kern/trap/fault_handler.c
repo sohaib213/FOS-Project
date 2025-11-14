@@ -182,7 +182,7 @@ void fault_handler(struct Trapframe *tf)
 			}
 			// Check if inside user heap but unmarked
 
-			if (present && !user) {
+			if (!user && fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX) {
 				cprintf("Invalid pointer: unmapped page at %x\n", fault_va);
 				env_exit();
 				return;
@@ -353,9 +353,12 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 
 		cprintf("Debug: Inserting new WS element at tail. WS size before insert=%d\n", wsSize);
 		LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
-		cprintf("Debug: WS element inserted successfully for VA=%x\n", fault_va);
-
-
+		// faulted_env->page_last_WS_element = new_element;
+		// cprintf("last element in ws = %p\n", faulted_env->page_last_WS_element);
+		if(wsSize == faulted_env->page_WS_max_size - 1)
+		{
+			faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
+		}
 	}
 	else
 	{

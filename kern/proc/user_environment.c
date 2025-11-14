@@ -937,7 +937,7 @@ uint32 __cur_k_stk = KERNEL_HEAP_START;
 void* create_user_kern_stack(uint32* ptr_user_page_directory)
 {
 	//TODO: [PROJECT'25.GM#3] FAULT HANDLER I - #1 create_user_kern_stack
-	cprintf("Debug: Entered create_user_kern_stack()\n");
+	// cprintf("Debug: Entered create_user_kern_stack()\n");
 
 	uint32 PAGES;
 	uint32 Virtual_ad;
@@ -950,22 +950,24 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 
 	// cprintf("KERNEL STACK TOP = %p\n", KERN_STACK_TOP);
 	//  mapping stack
-	for(int i = 0; i < PAGES - 1; i++){
+	// cprintf("ptr Page direcotry from create stack = %p/n", ptr_user_page_directory);
+	for(int i = 0; i < PAGES ; i++){
 		Virtual_ad = __cur_k_stk - (i + 1) * PAGE_SIZE;
 		// cprintf("Debug: Mapping frame %d to virtual address %p\n", i, Virtual_ad);
 		// map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
+		
 		alloc_page(ptr_user_page_directory, Virtual_ad, perm, 1);
 	}
-	// uint32* ptr_table ;
-	// uint32 ret =  get_page_table(ptr_user_page_directory, Virtual_ad, &ptr_table);
-	// uint32 index_page_table = PTX(Virtual_ad);
+	uint32* ptr_table ;
+	uint32 ret =  get_page_table(ptr_user_page_directory, Virtual_ad, &ptr_table);
+	uint32 index_page_table = PTX(Virtual_ad);
 	// cprintf("table Enter before = %p\n", ptr_table[index_page_table]);
-	// ptr_table[index_page_table] = (ptr_table[index_page_table]) &(0xFFFFFFFE);
+	ptr_table[index_page_table] = (ptr_table[index_page_table]) &(0xFFFFFFFE);
 	// cprintf("table Enter after = %p\n", ptr_table[index_page_table]);
 
 
 
-	cprintf("Debug: User kernel stack created. Start address (after guard page) = 0x%x\n", Virtual_ad - PAGE_SIZE);
+	// cprintf("Debug: User kernel stack created. Start address (after guard page) = 0x%x\n", Virtual_ad);
 	__cur_k_stk -= KERNEL_STACK_SIZE;
 	return (void *)(__cur_k_stk);
 
