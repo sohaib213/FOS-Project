@@ -51,7 +51,7 @@ uint32 NUM_OF_TESTS = (sizeof(tests)/sizeof(struct Test));
 //=================//
 int tst_handler(int number_of_arguments, char **arguments)
 {
-	cprintf("CAME HERE\n");
+	// cprintf("CAME HERE\n");
 	//Remove "tst" from arguments
 	for (int a = 0; a < number_of_arguments - 1; ++a)
 	{
