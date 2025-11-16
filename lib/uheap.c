@@ -46,11 +46,14 @@ void return_page(void* va)
 //============================ REQUIRED FUNCTIONS ==================================//
 //==================================================================================//
 
+struct pageUserHeapInfo pagesInfo[UHP_PAGES_AREA_NUMBER];
+
 //=================================
 // [1] ALLOCATE SPACE IN USER HEAP:
 //=================================
 void* malloc(uint32 size)
 {
+	// cprintf("size = %d\n", size);
 	//==============================================================
 	//DON'T CHANGE THIS CODE========================================
 	uheap_init();
@@ -59,7 +62,88 @@ void* malloc(uint32 size)
 	//TODO: [PROJECT'25.IM#2] USER HEAP - #1 malloc
 	//Your code is here
 	//Comment the following line
-	panic("malloc() is not implemented yet...!!");
+	// panic("malloc() is not implemented yet...!!");
+
+	if(ROUNDUP(size, PAGE_SIZE) > (USER_HEAP_MAX - uheapPageAllocStart))
+	{
+		return NULL;
+	}
+	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		cprintf("size = %d\n", size);
+		uint32* a = alloc_block(size);
+		cprintf("return add = %p\n\n", (uint32)a);
+
+		if(a == NULL)
+			return NULL;
+		else
+		{
+			sys_allocate_user_mem((uint32) a, size);
+			return (void *)a;}
+	}else{
+		size = ROUNDUP(size, PAGE_SIZE);
+		uint32 maxSize = 0, maxSizeAddress;
+		uint32 resultAddress = 0, lastAddress = 0;
+
+		
+		for(uint32 currentAddress = uheapPageAllocStart; currentAddress < uheapPageAllocBreak;)
+		{
+			struct pageUserHeapInfo *currentPageInfo = &pagesInfo[getPagesInfoIndex(currentAddress)];
+			if (!currentPageInfo->isBlocked) {
+				if(size == currentPageInfo->size) // CUSTOM FIT FOUND
+				{
+					resultAddress = currentAddress;
+					currentPageInfo->isBlocked = 1;
+					break;
+				}
+				if(currentPageInfo->size > size && currentPageInfo->size > maxSize)
+				{
+					maxSize = currentPageInfo->size;
+					maxSizeAddress = currentAddress;
+				}
+			}
+			lastAddress = currentAddress;
+			currentAddress += currentPageInfo->size;
+		}
+
+		if(resultAddress == 0)
+		{
+			if(maxSize != 0)
+			{
+				resultAddress = maxSizeAddress;
+				struct pageUserHeapInfo *maxSizePage = &pagesInfo[getPagesInfoIndex(maxSizeAddress)], *nextPage, *splitAddress;
+				splitAddress = &pagesInfo[getPagesInfoIndex(maxSizeAddress + size)];
+				nextPage = &pagesInfo[getPagesInfoIndex(maxSizeAddress + maxSizePage->size)];
+	
+				splitAddress->size = maxSizePage->size - size;
+				splitAddress->prevPageStartAddress = maxSizeAddress;
+	
+				nextPage->prevPageStartAddress = maxSizeAddress + size;
+	
+				maxSizePage->isBlocked = 1;
+				maxSizePage->size = size;
+			}
+			else{
+				if(USER_HEAP_MAX - uheapPageAllocBreak < size)
+				{
+					return NULL;
+				}
+	
+				resultAddress = uheapPageAllocBreak;
+				struct pageUserHeapInfo *page = &pagesInfo[getPagesInfoIndex(resultAddress)];
+				page->isBlocked = 1;
+				page->size = size;
+				page->prevPageStartAddress = lastAddress;
+	
+				uheapPageAllocBreak += size;
+			}
+		}
+		// cprintf("resultAddress = %p\n", resultAddress);
+		sys_allocate_user_mem(resultAddress, size);
+		return (void*)resultAddress;
+	}
+
+	return NULL;
 }
 
 //=================================
@@ -162,3 +246,6 @@ void sfree(void* virtual_address)
 //==================================================================================//
 //========================== MODIFICATION FUNCTIONS ================================//
 //==================================================================================//
+uint32 getPagesInfoIndex(uint32 address){
+	return (address - uheapPageAllocStart) / PAGE_SIZE;
+}

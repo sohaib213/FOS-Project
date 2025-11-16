@@ -147,16 +147,24 @@ void* sys_sbrk(int numOfPages)
 //=====================================
 void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 {
-	/*====================================*/
-	/*Remove this line before start coding*/
-//		inctst();
-//		return;
-	/*====================================*/
-
 	//TODO: [PROJECT'25.IM#2] USER HEAP - #2 allocate_user_mem
 	//Your code is here
 	//Comment the following line
-	panic("allocate_user_mem() is not implemented yet...!!");
+	// panic("allocate_user_mem() is not implemented yet...!!");
+	
+	uint32 *page_directory = e->env_page_directory, *ptr_table ;
+
+	for(uint32 currentVa = virtual_address; currentVa < virtual_address + size; currentVa += PAGE_SIZE)
+	{
+		uint32 ret =  get_page_table(page_directory, currentVa, &ptr_table) ;
+		if(ptr_table == NULL)
+		{
+			ptr_table = (uint32 *)(create_page_table(page_directory, currentVa));
+		}
+		uint32 index_page_table = PTX(currentVa);
+		ptr_table[index_page_table] = ptr_table[index_page_table] | PERM_UHPAGE;
+	}
+	return;
 }
 
 //=====================================

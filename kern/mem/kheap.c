@@ -383,7 +383,7 @@ extern __inline__ uint32 get_block_size(void *va);
 
 void *krealloc(void *virtual_address, uint32 new_size)
 {
-	cprintf("kheapPageAllocBreak from krealloc = %p \n", kheapPageAllocBreak);
+	// cprintf("kheapPageAllocBreak from krealloc = %p \n", kheapPageAllocBreak);
 
 	//TODO: [PROJECT'25.BONUS#2] KERNEL REALLOC - krealloc
 	//Your code is here
@@ -395,7 +395,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	{
 		acquire_kspinlock(&MemFrameLists.mfllock);
 	}
-	cprintf("Size = %d\n", new_size);
+	// cprintf("Size = %d\n", new_size);
 	if(virtual_address == NULL)
 	{
 		return kmalloc(new_size);
@@ -416,13 +416,19 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		{
 			return NULL;
 		}
+
+		
 		// old size was block
 		if(va >= dynAllocStart && va <= dynAllocEnd)
 		{
+			// cprintf("new size = %d\n", new_size);
+			// cprintf("block size = %d\n\n", get_block_size(vaResult));
+			memcpy((void *)vaResult, (const void*)va, get_block_size(vaResult));
 			free_block(virtual_address);
 		}
 		else
 		{
+			memcpy((void *)vaResult, (const void*)va, pagesInfo[getPagesInfoIndex(va)].size);
 			kfree(virtual_address);
 		}
 		return (void *) vaResult;
@@ -435,8 +441,9 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		void * vaRes = kmalloc(new_size);
 		if(vaRes == NULL)
 		{
-			return NULL;
+			return virtual_address;
 		}
+		memcpy((void *)vaRes, (const void*)va, get_block_size(virtual_address));
 		free_block(virtual_address);
 		return vaRes;
 	}
@@ -575,12 +582,15 @@ void *krealloc(void *virtual_address, uint32 new_size)
 					}
 
 				}
+
+				// cprintf("Memory copied\n");
+				a = allocFrames(startAddress, va);
+				memcpy((void *)startAddress, (const void*)va, oldProgramm->size);
+
 				oldProgramm->isBlocked = 0;
 				oldProgramm->size = 0;
 				oldProgramm->prevPageStartAddress = 0;
 				oldProgramm = before;
-				
-				a = allocFrames(startAddress, va);
 				if(!a)
 				{
 					return NULL;
@@ -631,6 +641,8 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			return (void *)startAddress;
 		}else{
 			void* vaResult = kmalloc(new_size);
+			memcpy(vaResult, (const void*)va, oldProgramm->size);
+
 			if(vaResult == NULL)
 				return NULL;
 			kfree(virtual_address);
@@ -640,7 +652,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	else{
 		// free Space From The programm
 		uint32 sizeToDelete = oldProgramm->size - new_size;
-		cprintf("sizeToDelete = %d\n", sizeToDelete);
+		// cprintf("sizeToDelete = %d\n", sizeToDelete);
 		struct pageInfo *splitPoint;
 		splitPoint = &pagesInfo[getPagesInfoIndex(va + new_size)];
 	

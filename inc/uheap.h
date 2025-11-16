@@ -11,6 +11,9 @@
 //2020
 #define UHP_USE_BUDDY 0
 
+// my variables
+#define UHP_PAGES_AREA_NUMBER  (USER_HEAP_MAX - (USER_HEAP_START + DYN_ALLOC_MAX_SIZE + PAGE_SIZE)) / PAGE_SIZE
+
 //TODO: [PROJECT'25.GM#2] USER HEAP - #0 Page Alloc Limits [GIVEN]
 uint32 uheapPageAllocStart ;
 uint32 uheapPageAllocBreak ;
@@ -24,5 +27,10 @@ void free(void* virtual_address);
 void sfree(void* virtual_address);
 void *realloc(void *virtual_address, uint32 new_size);
 
+uint32 getPagesInfoIndex(uint32 address);
+struct pageUserHeapInfo {
+  bool isBlocked;
+  uint32 size, prevPageStartAddress;
+};
 
 #endif
