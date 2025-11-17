@@ -181,7 +181,40 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	//TODO: [PROJECT'25.IM#2] USER HEAP - #4 free_user_mem
 	//Your code is here
 	//Comment the following line
-	panic("free_user_mem() is not implemented yet...!!");
+	// panic("free_user_mem() is not implemented yet...!!");
+	uint32 *page_directory = e->env_page_directory, *ptr_table ;
+
+	for(uint32 currentVa = virtual_address; currentVa < virtual_address + size; currentVa += PAGE_SIZE)
+	{
+
+
+		// delete page from working set
+		// cprintf("env ws size before = %d: \n", LIST_SIZE(&e->page_WS_list));
+		// env_page_ws_print(e);
+		struct WorkingSetElement* elemenToDelete;
+		LIST_FOREACH_SAFE(elemenToDelete, &(e->page_WS_list), WorkingSetElement)
+		{
+			if(elemenToDelete->virtual_address == currentVa)
+			{
+				// cprintf("deleted working set element at va = %p\n", currentVa);
+				LIST_REMOVE(&(e->page_WS_list), elemenToDelete);
+				tlb_invalidate(page_directory, elemenToDelete);
+				// cprintf("env ws size after = %d: \n", LIST_SIZE(&e->page_WS_list));
+
+				break;
+			}
+		}
+		uint32 ret =  get_page_table(page_directory, currentVa, &ptr_table) ;
+		uint32 index_page_table = PTX(currentVa);
+		// set bit PERM_UHPAGE to 0 
+		if((ptr_table[index_page_table] & PERM_UHPAGE) == PERM_UHPAGE){
+			// cprintf("remove frame mapped to va = %p\n", currentVa);
+			unmap_frame(page_directory, currentVa);
+		}
+		ptr_table[index_page_table] = ptr_table[index_page_table] & !PERM_UHPAGE;
+		// delete page from disk
+		pf_remove_env_page(e, currentVa);
+	}
 }
 
 //=====================================

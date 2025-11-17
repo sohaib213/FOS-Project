@@ -416,14 +416,12 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		{
 			return NULL;
 		}
-
-		
 		// old size was block
-		if(va >= dynAllocStart && va <= dynAllocEnd)
+		if(va >= dynAllocStart && va < dynAllocEnd)
 		{
 			// cprintf("new size = %d\n", new_size);
 			// cprintf("block size = %d\n\n", get_block_size(vaResult));
-			memcpy((void *)vaResult, (const void*)va, get_block_size(vaResult));
+			memcpy((void *)vaResult, (const void*)va, get_block_size(virtual_address));
 			free_block(virtual_address);
 		}
 		else

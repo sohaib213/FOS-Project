@@ -154,7 +154,113 @@ void free(void* virtual_address)
 	//TODO: [PROJECT'25.IM#2] USER HEAP - #3 free
 	//Your code is here
 	//Comment the following line
-	panic("free() is not implemented yet...!!");
+	// panic("free() is not implemented yet...!!");
+	if(virtual_address == NULL)
+	{
+		panic("kfree() error: NULL pointer passed!");
+	}
+
+
+	uint32 va = (uint32)virtual_address;
+
+	if(va >= USER_HEAP_START && va < dynAllocEnd)
+	{
+			// This is a small block allocation
+			free_block(virtual_address);
+			return;
+	}
+
+	// ========================================
+	// Case 2: Large Block (Page Allocator)
+	// ========================================
+  if(va >= uheapPageAllocStart && va < USER_HEAP_MAX)
+	{
+
+		uint32 block_start = ROUNDDOWN(va, PAGE_SIZE);
+
+		struct pageUserHeapInfo *pageToDelete = &pagesInfo[getPagesInfoIndex(block_start)];
+
+		// If size is 0, this block was not allocated
+		if(pageToDelete->size == 0 || !pageToDelete->isBlocked)
+		{
+				panic("kfree() error: trying to free unallocated block!");
+		}
+
+		// // Calculate the number of pages to free
+		// uint32 block_end = block_start + pageToDelete->size;
+
+		// // Free all frames for this block
+		// for(uint32 addr = block_start; addr < block_end; addr += PAGE_SIZE)
+		// {
+		// 	unmap_frame(ptr_page_directory, addr);
+		// }
+		// cprintf("block start = %p,   size = %d\n", (uint32) block_start, ROUNDUP(pageToDelete->size, PAGE_SIZE));
+		sys_free_user_mem((uint32) block_start, ROUNDUP(pageToDelete->size, PAGE_SIZE));
+
+
+		bool foundBeforePageEmpty = 0;
+		uint32 sizeDeleted = pageToDelete->size;
+		struct pageUserHeapInfo *pageBeforeDeleted;
+		if(block_start != uheapPageAllocStart) // check if there a free block before it
+		{
+			pageBeforeDeleted = &pagesInfo[getPagesInfoIndex(pageToDelete->prevPageStartAddress)];
+			if(!pageBeforeDeleted -> isBlocked)
+			{
+				pageBeforeDeleted->size += sizeDeleted;
+				block_start = pageToDelete->prevPageStartAddress;
+				pageToDelete->size = 0;
+				foundBeforePageEmpty = 1;
+			}
+		}
+
+		struct pageUserHeapInfo *pageAfterDeleted;
+		if(foundBeforePageEmpty)
+		{
+			pageAfterDeleted = &pagesInfo[getPagesInfoIndex(block_start + pageBeforeDeleted->size)];
+		}
+		else
+		{
+			pageAfterDeleted = &pagesInfo[getPagesInfoIndex(block_start + pageToDelete->size)];
+		}
+		if(pageAfterDeleted -> size != 0) // chek if the page deleted is not before break directly
+		{
+			if(pageAfterDeleted->isBlocked)
+			{
+				pageAfterDeleted->prevPageStartAddress = block_start;
+			}
+			else
+			{
+				struct pageUserHeapInfo *pageAfterAfter;
+				if(foundBeforePageEmpty)
+				{
+					pageBeforeDeleted->size += pageAfterDeleted->size;
+					pagesInfo[getPagesInfoIndex(block_start + pageBeforeDeleted->size)].prevPageStartAddress = block_start;
+
+				}
+				else
+				{
+					pageToDelete->size += pageAfterDeleted->size;
+					pagesInfo[getPagesInfoIndex(block_start + pageToDelete->size)].prevPageStartAddress = block_start;
+				}
+				pageAfterDeleted->size = 0;
+			}
+		}else{
+			uheapPageAllocBreak = block_start;
+			if(foundBeforePageEmpty)
+			{
+				pageBeforeDeleted->size = 0;
+			}
+			else
+			{
+				pageToDelete->size = 0;
+			}
+		}
+		
+		pageToDelete->isBlocked = 0;
+	}
+	else{
+		panic("kfree() error: invalid virtual address!");
+	}
 }
 
 //=================================

@@ -155,6 +155,7 @@ int __numOfSlaves = 0;
 struct ksemaphore __ksems[__maxNumOfKSems];
 void sys_utilities(char* utilityName, int value)
 {
+#if USE_KHEAP
 	if (strncmp(utilityName, "__BSDSetNice@", strlen("__BSDSetNice@")) == 0)
 	{
 		int number_of_tokens;
@@ -573,7 +574,7 @@ void sys_utilities(char* utilityName, int value)
 		}
 	}
 	/*****************************************************************************************/
-
+#endif
 }
 /*=======================================*/
 void detect_loop_in_FrameInfo_list(struct FrameInfo_List* fi_list)

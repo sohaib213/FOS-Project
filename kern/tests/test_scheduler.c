@@ -68,174 +68,19 @@ int find_in_range(int env_id, int start, int count)
 
 void test_bsd_nice_0()
 {
-	if (firstTimeTest)
-	{
-		firstTimeTest = 0;
-		int nice_values[] = {-10, -5, 0, 5, 10};
-		for (int i = 0; i < INSTANCES_NUMBER/2; i++)
-		{
-			struct Env *env = env_create("bsd_fib", 500, 0, 0);
-			int nice_index = i % TOTAL_TEST_VALUES;
-			env_set_nice(env, nice_values[nice_index]);
-			if (env == NULL)
-				panic("Loading programs failed\n");
-			if (env->page_WS_max_size != 500)
-				panic("The program working set size is not correct\n");
+	panic("not implemented");
 
-			switch (nice_values[nice_index])
-			{
-			case -10:
-				prog_orders[0][env_count[0]++] = env->env_id;
-				break;
-			case -5:
-				prog_orders[1][env_count[1]++] = env->env_id;
-				break;
-			case 0:
-				prog_orders[2][env_count[2]++] = env->env_id;
-				break;
-			case 5:
-				prog_orders[3][env_count[3]++] = env->env_id;
-				break;
-			case 10:
-				prog_orders[4][env_count[4]++] = env->env_id;
-				break;
-			}
-			sched_new_env(env);
-		}
-		// print_order(prog_orders);
-		cprintf("> Running... (After all running programs finish, Run the same command again.)\n");
-		execute_command("runall");
-	}
-	else
-	{
-		cprintf("> Checking...\n");
-		sched_print_all();
-		// print_order(prog_orders);
-		int start_idx = 0;
-		for (int i = 0; i < TOTAL_TEST_VALUES; i++)
-		{
-			for (int j = 0; prog_orders[i][j] != 0; j++)
-			{
-				int exist = find_in_range(prog_orders[i][j], start_idx, env_count[i]);
-				if (exist == -1)
-					panic("The programs' order of finishing is not correct\n");
-			}
-			start_idx += env_count[i];
-		}
-		firstTimeTest = 0;
-	}
-	cprintf("\nCongratulations!! test_bsd_nice_0 completed successfully.\n");
 }
 
 
 void test_bsd_nice_1()
 {
-	if (firstTimeTest)
-	{
-		firstTimeTest = 0;
-		struct Env *fibEnv = env_create("bsd_fib", 500, 0, 0);
-		struct Env *fibposnEnv = env_create("bsd_fib_posn", 500, 0, 0);
-		struct Env *fibnegnEnv = env_create("bsd_fib_negn", 500, 0, 0);
-		if (fibEnv == NULL || fibposnEnv == NULL || fibnegnEnv == NULL)
-			panic("Loading programs failed\n");
-		if (fibEnv->page_WS_max_size != 500 || fibposnEnv->page_WS_max_size != 500 || fibnegnEnv->page_WS_max_size != 500)
-			panic("The programs should be initially loaded with the given working set size. fib: %d, fibposn: %d, fibnegn: %d\n", fibEnv->page_WS_max_size, fibposnEnv->page_WS_max_size, fibnegnEnv->page_WS_max_size);
-		sched_new_env(fibEnv);
-		sched_new_env(fibposnEnv);
-		sched_new_env(fibnegnEnv);
-		prog_orders[0][0] = fibnegnEnv->env_id;
-		prog_orders[1][0] = fibEnv->env_id;
-		prog_orders[2][0] = fibposnEnv->env_id;
-		cprintf("> Running... (After all running programs finish, Run the same command again.)\n");
-		execute_command("runall");
-	}
-	else
-	{
-		cprintf("> Checking...\n");
-		sched_print_all();
-		// print_order(prog_orders);
-		int i = 0;
-		struct Env *env = NULL;
-		acquire_kspinlock(&ProcessQueues.qlock);
-		{
-			//REVERSE LOOP ON EXIT LIST (to be the same as the queue order)
-			int numOfExitEnvs = LIST_SIZE(&ProcessQueues.env_exit_queue);
-			env = LIST_LAST(&ProcessQueues.env_exit_queue);
-			for (; i < numOfExitEnvs; env = LIST_PREV(env))
-				//LIST_FOREACH_R(env, &env_exit_queue)
-			{
-				// cprintf("%s - id=%d, priority=%d, nice=%d\n", env->prog_name, env->env_id, env->priority, env->nice);
-				if (prog_orders[i][0] != env->env_id)
-					panic("The programs' order of finishing is not correct\n");
-				i++;
-			}
-		}
-		release_kspinlock(&ProcessQueues.qlock);
-	}
-	cprintf("\nCongratulations!! test_bsd_nice_1 completed successfully.\n");
+	panic("not implemented");
 }
 
 void test_bsd_nice_2()
 {
-	if (firstTimeTest)
-	{
-		chksch(1);
-		firstTimeTest = 0;
-		int nice_values[] = {15, 5, 0, -5, -15};
-		for (int i = 0; i < INSTANCES_NUMBER; i++)
-		{
-			struct Env *env = env_create("bsd_matops", 10000, 0, 0);
-			int nice_index = i % TOTAL_TEST_VALUES;
-			env_set_nice(env, nice_values[nice_index]);
-			if (env == NULL)
-				panic("Loading programs failed\n");
-			if (env->page_WS_max_size != 10000)
-				panic("The program working set size is not correct\n");
-
-			switch (nice_values[nice_index])
-			{
-			case -15:
-				prog_orders[0][env_count[0]++] = env->env_id;
-				break;
-			case -5:
-				prog_orders[1][env_count[1]++] = env->env_id;
-				break;
-			case 0:
-				prog_orders[2][env_count[2]++] = env->env_id;
-				break;
-			case 5:
-				prog_orders[3][env_count[3]++] = env->env_id;
-				break;
-			case 15:
-				prog_orders[4][env_count[4]++] = env->env_id;
-				break;
-			}
-			sched_new_env(env);
-		}
-		// print_order(prog_orders);
-		cprintf("> Running... (After all running programs finish, Run the same command again.)\n");
-		execute_command("runall");
-	}
-	else
-	{
-		chksch(0);
-		cprintf("> Checking...\n");
-		sched_print_all();
-		// print_order(prog_orders);
-		int start_idx = 0;
-		for (int i = 0; i < TOTAL_TEST_VALUES; i++)
-		{
-			for (int j = 0; prog_orders[i][j] != 0; j++)
-			{
-				int exist = find_in_range(prog_orders[i][j], start_idx, env_count[i]);
-				if (exist == -1)
-					panic("The programs' order of finishing is not correct\n");
-			}
-			start_idx += env_count[i];
-		}
-		firstTimeTest = 0;
-	}
-	cprintf("\nCongratulations!! test_bsd_nice_2 completed successfully.\n");
+	panic("not implemented");
 }
 
 
