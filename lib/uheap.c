@@ -277,7 +277,74 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 	//TODO: [PROJECT'25.IM#3] SHARED MEMORY - #2 smalloc
 	//Your code is here
 	//Comment the following line
-	panic("smalloc() is not implemented yet...!!");
+	//panic("smalloc() is not implemented yet...!!");
+
+
+	size = ROUNDUP(size, PAGE_SIZE);
+	uint32 maxSize = 0, maxSizeAddress;
+	uint32 resultAddress = 0, lastAddress = 0;
+	
+	for(uint32 currentAddress = uheapPageAllocStart; currentAddress < uheapPageAllocBreak;)
+	{
+		struct pageUserHeapInfo *currentPageInfo = &pagesInfo[getPagesInfoIndex(currentAddress)];
+		if (!currentPageInfo->isBlocked) {
+			if(size == currentPageInfo->size) // CUSTOM FIT FOUND
+			{
+				resultAddress = currentAddress;
+				currentPageInfo->isBlocked = 1;
+				break;
+			}
+			if(currentPageInfo->size > size && currentPageInfo->size > maxSize)
+			{
+				maxSize = currentPageInfo->size;
+				maxSizeAddress = currentAddress;
+			}
+		}
+		lastAddress = currentAddress;
+		currentAddress += currentPageInfo->size;
+	}
+	if(resultAddress == 0)
+	{
+		if(maxSize != 0)
+		{
+			resultAddress = maxSizeAddress;
+			struct pageUserHeapInfo *maxSizePage = &pagesInfo[getPagesInfoIndex(maxSizeAddress)], *nextPage, *splitAddress;
+			splitAddress = &pagesInfo[getPagesInfoIndex(maxSizeAddress + size)];
+			nextPage = &pagesInfo[getPagesInfoIndex(maxSizeAddress + maxSizePage->size)];
+
+			splitAddress->size = maxSizePage->size - size;
+			splitAddress->prevPageStartAddress = maxSizeAddress;
+
+			nextPage->prevPageStartAddress = maxSizeAddress + size;
+
+			maxSizePage->isBlocked = 1;
+			maxSizePage->size = size;
+		}
+		else{
+			if(USER_HEAP_MAX - uheapPageAllocBreak < size)
+			{
+				return NULL;
+			}
+
+			resultAddress = uheapPageAllocBreak;
+			struct pageUserHeapInfo *page = &pagesInfo[getPagesInfoIndex(resultAddress)];
+			page->isBlocked = 1;
+			page->size = size;
+			page->prevPageStartAddress = lastAddress;
+
+			uheapPageAllocBreak += size;
+		}
+	}
+
+	struct Env* myenv = get_cpu_proc();
+	int32 ownerID = myenv->env_id;
+	int id = sys_create_shared_object(ownerID, sharedVarName, size, isWritable, resultAddress);
+	
+	if(id != E_NO_SHARE && id != E_SHARED_MEM_EXISTS){
+		return (void *)resultAddress;
+	}
+
+	return NULL;
 }
 
 //========================================
@@ -293,7 +360,73 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	//TODO: [PROJECT'25.IM#3] SHARED MEMORY - #4 sget
 	//Your code is here
 	//Comment the following line
-	panic("sget() is not implemented yet...!!");
+	//panic("sget() is not implemented yet...!!");
+
+	int size = sys_size_of_shared_object(ownerEnvID,sharedVarName);
+	if(size == E_SHARED_MEM_NOT_EXISTS || size == 0)
+		return NULL;
+
+	size = ROUNDUP(size, PAGE_SIZE);
+	uint32 maxSize = 0, maxSizeAddress;
+	uint32 resultAddress = 0, lastAddress = 0;
+	
+	for(uint32 currentAddress = uheapPageAllocStart; currentAddress < uheapPageAllocBreak;)
+	{
+		struct pageUserHeapInfo *currentPageInfo = &pagesInfo[getPagesInfoIndex(currentAddress)];
+		if (!currentPageInfo->isBlocked) {
+			if(size == currentPageInfo->size) // CUSTOM FIT FOUND
+			{
+				resultAddress = currentAddress;
+				currentPageInfo->isBlocked = 1;
+				break;
+			}
+			if(currentPageInfo->size > size && currentPageInfo->size > maxSize)
+			{
+				maxSize = currentPageInfo->size;
+				maxSizeAddress = currentAddress;
+			}
+		}
+		lastAddress = currentAddress;
+		currentAddress += currentPageInfo->size;
+	}
+	if(resultAddress == 0)
+	{
+		if(maxSize != 0)
+		{
+			resultAddress = maxSizeAddress;
+			struct pageUserHeapInfo *maxSizePage = &pagesInfo[getPagesInfoIndex(maxSizeAddress)], *nextPage, *splitAddress;
+			splitAddress = &pagesInfo[getPagesInfoIndex(maxSizeAddress + size)];
+			nextPage = &pagesInfo[getPagesInfoIndex(maxSizeAddress + maxSizePage->size)];
+
+			splitAddress->size = maxSizePage->size - size;
+			splitAddress->prevPageStartAddress = maxSizeAddress;
+
+			nextPage->prevPageStartAddress = maxSizeAddress + size;
+
+			maxSizePage->isBlocked = 1;
+			maxSizePage->size = size;
+		}
+		else{
+			if(USER_HEAP_MAX - uheapPageAllocBreak < size)
+			{
+				return NULL;
+			}
+
+			resultAddress = uheapPageAllocBreak;
+			struct pageUserHeapInfo *page = &pagesInfo[getPagesInfoIndex(resultAddress)];
+			page->isBlocked = 1;
+			page->size = size;
+			page->prevPageStartAddress = lastAddress;
+
+			uheapPageAllocBreak += size;
+		}
+	}
+
+	int id = sys_get_shared_object(ownerEnvID,sharedVarName,resultAddress);
+	if(id != E_SHARED_MEM_NOT_EXISTS){
+		return (void *)resultAddress;
+	}
+	return NULL;
 }
 
 
