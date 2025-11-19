@@ -336,9 +336,8 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 		}
 	}
 
-	struct Env* myenv = get_cpu_proc();
-	int32 ownerID = myenv->env_id;
-	int id = sys_create_shared_object(ownerID, sharedVarName, size, isWritable, resultAddress);
+
+	int id = sys_create_shared_object(sharedVarName, size, isWritable, (void*)resultAddress);
 	
 	if(id != E_NO_SHARE && id != E_SHARED_MEM_EXISTS){
 		return (void *)resultAddress;
@@ -363,8 +362,9 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	//panic("sget() is not implemented yet...!!");
 
 	int size = sys_size_of_shared_object(ownerEnvID,sharedVarName);
-	if(size == E_SHARED_MEM_NOT_EXISTS || size == 0)
+	if(size == E_SHARED_MEM_NOT_EXISTS || size == 0){
 		return NULL;
+	}
 
 	size = ROUNDUP(size, PAGE_SIZE);
 	uint32 maxSize = 0, maxSizeAddress;
@@ -422,13 +422,13 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 		}
 	}
 
-	int id = sys_get_shared_object(ownerEnvID,sharedVarName,resultAddress);
+	int id = sys_get_shared_object(ownerEnvID,sharedVarName,(void*)resultAddress);
 	if(id != E_SHARED_MEM_NOT_EXISTS){
 		return (void *)resultAddress;
 	}
+
 	return NULL;
 }
-
 
 //==================================================================================//
 //============================== BONUS FUNCTIONS ===================================//
