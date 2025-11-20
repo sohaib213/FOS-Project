@@ -182,8 +182,8 @@ int create_shared_object(int32 ownerID, char* shareName, uint32 size, uint8 isWr
 		return E_SHARED_MEM_EXISTS;
 	}
 
-
 	struct Share *shared_obj = alloc_share(ownerID,shareName,size,isWritable);
+	
 	
 	if(shared_obj == NULL){
 		if(!lock_already_held)
@@ -196,40 +196,25 @@ int create_shared_object(int32 ownerID, char* shareName, uint32 size, uint8 isWr
 	unsigned int pages =(unsigned int) (ROUNDUP(size,PAGE_SIZE) / PAGE_SIZE);
 	uint32 va = (uint32) virtual_address;
 
-	
+	uint32 permession = PERM_USER;
+	if(isWritable)
+		permession |= 0x002;
 
 	for(int i=0; i < pages; i++){
 
-		int ret = alloc_page(page_direc,va,isWritable,1);
+		int ret = alloc_page(page_direc,va,permession,1);
+		
 		uint32* ptr_table;
 		struct FrameInfo* ptr_fi = get_frame_info(page_direc, va, &ptr_table);
-		
+
 		if(ptr_fi == 0){
 			
 			if(!lock_already_held)
 				release_kspinlock(&AllShares.shareslock);	
 			return E_NO_SHARE;
 		}
-		
 		shared_obj->framesStorage[i] = ptr_fi;
-	
-		// int ret2 = map_frame(page_direc,frame,va,isWritable);
-		
-		// if(ret2 != 0){
-		// 	//free_frame(frame);
 
-		// 	for(int j=0; j<i; ++j){
-		// 		unmap_frame(page_direc,va);
-		// 		va += PAGE_SIZE;
-		// 	}
-		// 	LIST_REMOVE(&AllShares.shares_list,shared_obj);
-		// 	kfree(shared_obj->framesStorage);
-		// 	kfree(shared_obj);
-
-		// 	if(!lock_already_held)
-		// 		release_kspinlock(&AllShares.shareslock);
-		// 	return E_NO_SHARE;
-		// }
 		va += PAGE_SIZE;
 	}
 
@@ -275,9 +260,24 @@ int get_shared_object(int32 ownerID, char* shareName, void* virtual_address)
 	uint32 va = (uint32) virtual_address;
 	unsigned int pages =(unsigned int) (ROUNDUP(shared_obj->size,PAGE_SIZE) / PAGE_SIZE);
 	
+	uint32 permession = PERM_USER;
+	if(shared_obj->isWritable)
+		permession |= 0x002;
 
 	for(uint32 i=0; i<pages; ++i){
-		int ret = map_frame(page_direc,shared_obj->framesStorage[i],va,shared_obj->isWritable);
+		unmap_frame(page_direc,va);	
+		int ret = map_frame(page_direc,shared_obj->framesStorage[i],va,permession);
+
+		if(ret != 0){
+			for(int j=0; j<i; ++j){
+				unmap_frame(page_direc,va);
+				va+= PAGE_SIZE;
+				if(!lock_already_held)
+					release_kspinlock(&AllShares.shareslock);
+				return E_SHARED_MEM_NOT_EXISTS;	
+			}
+		}
+
 		va += PAGE_SIZE;
 	}
 	shared_obj->references++;

@@ -160,7 +160,7 @@ inline int alloc_page(uint32* directory, uint32 va, uint32 perms, bool set_to_ze
 		if (ret == E_NO_MEM) {
 			return E_NO_MEM;
 		}
-		ret = map_frame(directory, ptr_fi, va, perms);
+		ret = map_frame(directory, ptr_fi, va, perms | 0x002);
 		if (ret == E_NO_MEM) {
 			free_frame(ptr_fi);
 			return E_NO_MEM;

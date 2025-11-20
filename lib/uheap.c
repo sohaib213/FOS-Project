@@ -336,8 +336,8 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 		}
 	}
 
-
 	int id = sys_create_shared_object(sharedVarName, size, isWritable, (void*)resultAddress);
+	//panic("calleddddddddddddddddddddddddddddddddd");
 	
 	if(id != E_NO_SHARE && id != E_SHARED_MEM_EXISTS){
 		return (void *)resultAddress;
@@ -360,7 +360,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	//Your code is here
 	//Comment the following line
 	//panic("sget() is not implemented yet...!!");
-
+	//panic("dah b2a 48aiiiiiiiiiiiiiiiiiiiii");
 	int size = sys_size_of_shared_object(ownerEnvID,sharedVarName);
 	if(size == E_SHARED_MEM_NOT_EXISTS || size == 0){
 		return NULL;
@@ -421,7 +421,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 			uheapPageAllocBreak += size;
 		}
 	}
-
+	//panic("callingggggggggggggggg");
 	int id = sys_get_shared_object(ownerEnvID,sharedVarName,(void*)resultAddress);
 	if(id != E_SHARED_MEM_NOT_EXISTS){
 		return (void *)resultAddress;
