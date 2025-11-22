@@ -2095,143 +2095,145 @@ int test_krealloc_WF_page()
 }
 int test_krealloc_CF_page()
 {
-	/*********************** NOTE ****************************
-	 * THIS TEST CHECKS krealloc() IN PAGE ALLOCATOR MODE
-	 * USING THE CUSTOM FIT STRATEGY.
-	 * 
-	 * IT TESTS:
-	 * 1. PRESERVATION OF DATA AFTER RESIZE
-	 * 2. EXPANSION IN PLACE (if possible)
-	 * 3. SHRINKING WITHOUT DATA LOSS
-	 * 4. MOVING TO NEW LOCATION WHEN NEEDED
-	 * 5. krealloc(ptr, 0) == kfree(ptr)
-	 *********************************************************/
+// 	/*********************** NOTE ****************************
+// 	 * THIS TEST CHECKS krealloc() IN PAGE ALLOCATOR MODE
+// 	 * USING THE CUSTOM FIT STRATEGY.
+// 	 * 
+// 	 * IT TESTS:
+// 	 * 1. PRESERVATION OF DATA AFTER RESIZE
+// 	 * 2. EXPANSION IN PLACE (if possible)
+// 	 * 3. SHRINKING WITHOUT DATA LOSS
+// 	 * 4. MOVING TO NEW LOCATION WHEN NEEDED
+// 	 * 5. krealloc(ptr, 0) == kfree(ptr)
+// 	 *********************************************************/
 
-	cprintf_colored(TEXT_yellow,"==============================================\n");
-	cprintf_colored(TEXT_yellow,"MAKE SURE to have a FRESH RUN for this test\n(i.e. don't run any program/test before it)\n");
-	cprintf_colored(TEXT_yellow,"==============================================\n");
+// 	cprintf_colored(TEXT_yellow,"==============================================\n");
+// 	cprintf_colored(TEXT_yellow,"MAKE SURE to have a FRESH RUN for this test\n(i.e. don't run any program/test before it)\n");
+// 	cprintf_colored(TEXT_yellow,"==============================================\n");
 
-	int correct = 1;
-	int eval = 0;
+// 	int correct = 1;
+// 	int eval = 0;
 
-	// 1. Allocate an initial block
-	cprintf_colored(TEXT_cyan,"\n1. Allocate initial block using kmalloc() [10%]\n");
-	uint32 freeFramesBefore = sys_calculate_free_frames();
+// 	// 1. Allocate an initial block
+// 	cprintf_colored(TEXT_cyan,"\n1. Allocate initial block using kmalloc() [10%]\n");
+// 	uint32 freeFramesBefore = sys_calculate_free_frames();
 
-	uint32 *ptr = (uint32 *)kmalloc(1 * Mega);
-	if (ptr == NULL)
-	{
-		cprintf_colored(TEXT_TESTERR_CLR,"Failed to allocate initial block!\n");
-		return 0;
-	}
+// 	uint32 *ptr = (uint32 *)kmalloc(1 * Mega);
+// 	if (ptr == NULL)
+// 	{
+// 		cprintf_colored(TEXT_TESTERR_CLR,"Failed to allocate initial block!\n");
+// 		return 0;
+// 	}
 
-	// Fill with pattern
-	for (int i = 0; i < (1 * Mega) / sizeof(uint32); i++)
-		ptr[i] = i;
+// 	// Fill with pattern
+// 	for (int i = 0; i < (1 * Mega) / sizeof(uint32); i++)
+// 		ptr[i] = i;
 
-	uint32 freeFramesAfter = sys_calculate_free_frames();
-	if (freeFramesAfter >= freeFramesBefore)
-	{
-		cprintf_colored(TEXT_TESTERR_CLR,"Frames not allocated correctly!\n");
-		correct = 0;
-	}
-	if (correct) eval += 10;
-	correct = 1;
+// 	uint32 freeFramesAfter = sys_calculate_free_frames();
+// 	if (freeFramesAfter >= freeFramesBefore)
+// 	{
+// 		cprintf_colored(TEXT_TESTERR_CLR,"Frames not allocated correctly!\n");
+// 		correct = 0;
+// 	}
+// 	if (correct) eval += 10;
+// 	correct = 1;
 
-	// 2. Expand the block (should preserve content)
-	cprintf_colored(TEXT_cyan,"\n2. Expand using krealloc() and verify data preservation [20%]\n");
-	uint32 *ptrExpanded = (uint32 *)krealloc(ptr, 2 * Mega);
-	if (ptrExpanded == NULL)
-	{
-		cprintf_colored(TEXT_TESTERR_CLR,"krealloc failed to expand block!\n");
-		return 0;
-	}
+// 	// 2. Expand the block (should preserve content)
+// 	cprintf_colored(TEXT_cyan,"\n2. Expand using krealloc() and verify data preservation [20%]\n");
+// 	uint32 *ptrExpanded = (uint32 *)krealloc(ptr, 2 * Mega);
+// 	if (ptrExpanded == NULL)
+// 	{
+// 		cprintf_colored(TEXT_TESTERR_CLR,"krealloc failed to expand block!\n");
+// 		return 0;
+// 	}
 
-	for (int i = 0; i < (1 * Mega) / sizeof(uint32); i++)
-	{
-		if (ptrExpanded[i] != i)
-		{
-			cprintf_colored(TEXT_TESTERR_CLR,"Data not preserved after expanding!\n");
-			correct = 0;
-			break;
-		}
-	}
-	if (correct) eval += 20;
-	correct = 1;
+// 	for (int i = 0; i < (1 * Mega) / sizeof(uint32); i++)
+// 	{
+// 		if (ptrExpanded[i] != i)
+// 		{
+// 			cprintf_colored(TEXT_TESTERR_CLR,"Data not preserved after expanding!\n");
+// 			correct = 0;
+// 			break;
+// 		}
+// 	}
+// 	if (correct) eval += 20;
+// 	correct = 1;
 
-	// 3. Shrink the block (should preserve beginning content)
-	cprintf_colored(TEXT_cyan,"\n3. Shrink using krealloc() and verify data [20%]\n");
-	uint32 *ptrShrunk = (uint32 *)krealloc(ptrExpanded, 512 * kilo);
-	if (ptrShrunk == NULL)
-	{
-		cprintf_colored(TEXT_TESTERR_CLR,"krealloc failed to shrink block!\n");
-		return 0;
-	}
+// 	// 3. Shrink the block (should preserve beginning content)
+// 	cprintf_colored(TEXT_cyan,"\n3. Shrink using krealloc() and verify data [20%]\n");
+// 	uint32 *ptrShrunk = (uint32 *)krealloc(ptrExpanded, 512 * kilo);
+// 	if (ptrShrunk == NULL)
+// 	{
+// 		cprintf_colored(TEXT_TESTERR_CLR,"krealloc failed to shrink block!\n");
+// 		return 0;
+// 	}
 
-	for (int i = 0; i < (512 * kilo) / sizeof(uint32); i++)
-	{
-		if (ptrShrunk[i] != i)
-		{
-			cprintf_colored(TEXT_TESTERR_CLR,"Data corrupted after shrinking!\n");
-			correct = 0;
-			break;
-		}
-	}
-	if (correct) eval += 20;
-	correct = 1;
+// 	for (int i = 0; i < (512 * kilo) / sizeof(uint32); i++)
+// 	{
+// 		if (ptrShrunk[i] != i)
+// 		{
+// 			cprintf_colored(TEXT_TESTERR_CLR,"Data corrupted after shrinking!\n");
+// 			correct = 0;
+// 			break;
+// 		}
+// 	}
+// 	if (correct) eval += 20;
+// 	correct = 1;
 
-	// 4. Force krealloc to move block (simulate no contiguous space)
-	cprintf_colored(TEXT_cyan,"\n4. Force relocation by allocating a neighbor and expanding [25%]\n");
-	uint32 *blockNeighbor = (uint32 *)kmalloc(1 * Mega);
-	if (blockNeighbor == NULL)
-	{
-		cprintf_colored(TEXT_TESTERR_CLR,"Failed to allocate neighbor block!\n");
-		return 0;
-	}
+// 	// 4. Force krealloc to move block (simulate no contiguous space)
+// 	cprintf_colored(TEXT_cyan,"\n4. Force relocation by allocating a neighbor and expanding [25%]\n");
+// 	uint32 *blockNeighbor = (uint32 *)kmalloc(1 * Mega);
+// 	if (blockNeighbor == NULL)
+// 	{
+// 		cprintf_colored(TEXT_TESTERR_CLR,"Failed to allocate neighbor block!\n");
+// 		return 0;
+// 	}
 
-	for (int i = 0; i < (1 * Mega) / sizeof(uint32); i++)
-		blockNeighbor[i] = 0xDEAD0000 | i;
+// 	for (int i = 0; i < (1 * Mega) / sizeof(uint32); i++)
+// 		blockNeighbor[i] = 0xDEAD0000 | i;
 
-	uint32 *ptrMoved = (uint32 *)krealloc(ptrShrunk, 3 * Mega);
-	if (ptrMoved == NULL)
-	{
-		cprintf_colored(TEXT_TESTERR_CLR,"krealloc failed to reallocate to new location!\n");
-		return 0;
-	}
+// 	uint32 *ptrMoved = (uint32 *)krealloc(ptrShrunk, 3 * Mega);
+// 	if (ptrMoved == NULL)
+// 	{
+// 		cprintf_colored(TEXT_TESTERR_CLR,"krealloc failed to reallocate to new location!\n");
+// 		return 0;
+// 	}
 
-	// Ensure content preserved even after move
-	for (int i = 0; i < (512 * kilo) / sizeof(uint32); i++)
-	{
-		if (ptrMoved[i] != i)
-		{
-			cprintf_colored(TEXT_TESTERR_CLR,"Data lost after moving to new location!\n");
-			correct = 0;
-			break;
-		}
-	}
-	if (correct) eval += 25;
-	correct = 1;
+// 	// Ensure content preserved even after move
+// 	for (int i = 0; i < (512 * kilo) / sizeof(uint32); i++)
+// 	{
+// 		if (ptrMoved[i] != i)
+// 		{
+// 			cprintf_colored(TEXT_TESTERR_CLR,"Data lost after moving to new location!\n");
+// 			correct = 0;
+// 			break;
+// 		}
+// 	}
+// 	if (correct) eval += 25;
+// 	correct = 1;
 
-	// 5. krealloc(ptr, 0) should free the block
-	cprintf_colored(TEXT_cyan,"\n5. krealloc(ptr, 0) should free memory [25%]\n");
-	uint32 freeBefore = sys_calculate_free_frames();
-	uint32 *freedPtr = (uint32 *)krealloc(ptrMoved, 0);
-	uint32 freeAfter = sys_calculate_free_frames();
+// 	// 5. krealloc(ptr, 0) should free the block
+// 	cprintf_colored(TEXT_cyan,"\n5. krealloc(ptr, 0) should free memory [25%]\n");
+// 	uint32 freeBefore = sys_calculate_free_frames();
+// 	uint32 *freedPtr = (uint32 *)krealloc(ptrMoved, 0);
+// 	uint32 freeAfter = sys_calculate_free_frames();
 
-	if (freedPtr != NULL)
-	{
-		cprintf_colored(TEXT_TESTERR_CLR,"krealloc(ptr, 0) did not return NULL!\n");
-		correct = 0;
-	}
-	if (freeAfter <= freeBefore)
-	{
-		cprintf_colored(TEXT_TESTERR_CLR,"Frames not released after krealloc(ptr, 0)!\n");
-		correct = 0;
-	}
-	if (correct) eval += 25;
+// 	if (freedPtr != NULL)
+// 	{
+// 		cprintf_colored(TEXT_TESTERR_CLR,"krealloc(ptr, 0) did not return NULL!\n");
+// 		correct = 0;
+// 	}
+// 	if (freeAfter <= freeBefore)
+// 	{
+// 		cprintf_colored(TEXT_TESTERR_CLR,"Frames not released after krealloc(ptr, 0)!\n");
+// 		correct = 0;
+// 	}
+// 	if (correct) eval += 25;
 
-	cprintf_colored(TEXT_light_green,"\nTest krealloc & CUSTOM FIT Page Alloc Completed. Evaluation = %d%\n", eval);
-	return 0;
+// 	cprintf_colored(TEXT_light_green,"\nTest krealloc & CUSTOM FIT Page Alloc Completed. Evaluation = %d%\n", eval);
+// 	return 0;
+	panic("not implemented function");
+
 }
 
 
@@ -2253,211 +2255,213 @@ int test_krealloc_WF_block()
 }
 int test_krealloc_CF_block()
 {
-    cprintf_colored(TEXT_yellow,"==============================================\n");
-    cprintf_colored(TEXT_yellow,"MAKE SURE to have a FRESH RUN for this test\n(i.e. don't run any program/test before it)\n");
-    cprintf_colored(TEXT_yellow,"==============================================\n");
+    // cprintf_colored(TEXT_yellow,"==============================================\n");
+    // cprintf_colored(TEXT_yellow,"MAKE SURE to have a FRESH RUN for this test\n(i.e. don't run any program/test before it)\n");
+    // cprintf_colored(TEXT_yellow,"==============================================\n");
 
-    int origFreeFrames = sys_calculate_free_frames();
-    int eval = 0;
+    // int origFreeFrames = sys_calculate_free_frames();
+    // int eval = 0;
 
-    // 1. Initial Block Allocations
-    cprintf_colored(TEXT_cyan,"\n1. Allocate initial blocks [20%]\n");
-    {
-        int correct = initial_block_allocations();
-        if (correct != 100)
-        {
-            cprintf_colored(TEXT_TESTERR_CLR,
-                "Block initial allocations incorrect. Fix kmalloc before testing krealloc.\n");
-            return 0;
-        }
-        eval += 20;
-    }
+    // // 1. Initial Block Allocations
+    // cprintf_colored(TEXT_cyan,"\n1. Allocate initial blocks [20%]\n");
+    // {
+    //     int correct = initial_block_allocations();
+    //     if (correct != 100)
+    //     {
+    //         cprintf_colored(TEXT_TESTERR_CLR,
+    //             "Block initial allocations incorrect. Fix kmalloc before testing krealloc.\n");
+    //         return 0;
+    //     }
+    //     eval += 20;
+    // }
 
-    // 2. Increase block sizes (block → larger block)
-    cprintf_colored(TEXT_cyan,"\n2. Increase block sizes (block → larger block) [20%]\n");
-    {
-        int correct = 1;
-        for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
-        {
-            uint32 oldSize = s;
-            uint32 newSize = oldSize * 2;  // guaranteed bigger
+    // // 2. Increase block sizes (block → larger block)
+    // cprintf_colored(TEXT_cyan,"\n2. Increase block sizes (block → larger block) [20%]\n");
+    // {
+    //     int correct = 1;
+    //     for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
+    //     {
+    //         uint32 oldSize = s;
+    //         uint32 newSize = oldSize * 2;  // guaranteed bigger
 
-            char* oldPtr = startBlockVAs[s];
+    //         char* oldPtr = startBlockVAs[s];
 
-            // Fill old block with known content
-            for (int i = 0; i < oldSize/2; i++)
-                oldPtr[i] = s;
+    //         // Fill old block with known content
+    //         for (int i = 0; i < oldSize/2; i++)
+    //             oldPtr[i] = s;
 
-            char* newPtr = krealloc(oldPtr, newSize);
-            startBlockVAs[s] = newPtr;
+    //         char* newPtr = krealloc(oldPtr, newSize);
+    //         startBlockVAs[s] = newPtr;
 
-            if (!newPtr)
-            {
-                correct = 0;
-                cprintf_colored(TEXT_TESTERR_CLR,
-                    "krealloc FAIL increasing block size %d → %d\n",
-                    oldSize, newSize);
-                break;
-            }
+    //         if (!newPtr)
+    //         {
+    //             correct = 0;
+    //             cprintf_colored(TEXT_TESTERR_CLR,
+    //                 "krealloc FAIL increasing block size %d → %d\n",
+    //                 oldSize, newSize);
+    //             break;
+    //         }
 
-            // Check copied content
-            int sum = 0;
-            for (int i = 0; i < oldSize/2; i++)
-                sum += newPtr[i];
+    //         // Check copied content
+    //         int sum = 0;
+    //         for (int i = 0; i < oldSize/2; i++)
+    //             sum += newPtr[i];
 
-            if (sum != (oldSize/2 * s))
-            {
-                correct = 0;
-                cprintf_colored(TEXT_TESTERR_CLR,
-                    "Incorrect content after increase blk %d → %d\n", oldSize, newSize);
-                break;
-            }
-        }
+    //         if (sum != (oldSize/2 * s))
+    //         {
+    //             correct = 0;
+    //             cprintf_colored(TEXT_TESTERR_CLR,
+    //                 "Incorrect content after increase blk %d → %d\n", oldSize, newSize);
+    //             break;
+    //         }
+    //     }
 
-        if (correct) eval += 20;
-    }
+    //     if (correct) eval += 20;
+    // }
 
-    // 3. Block → page transition (realloc to large size)
-    cprintf_colored(TEXT_cyan,"\n3. Realloc block → page transition [20%]\n");
-    {
-        int correct = 1;
+    // // 3. Block → page transition (realloc to large size)
+    // cprintf_colored(TEXT_cyan,"\n3. Realloc block → page transition [20%]\n");
+    // {
+    //     int correct = 1;
 
-        for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
-        {
-            char* ptr = startBlockVAs[s];
+    //     for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
+    //     {
+    //         char* ptr = startBlockVAs[s];
 
-            // Make sure this definitely becomes a PAGE allocation
-            uint32 newSize = 3 * PAGE_SIZE;
+    //         // Make sure this definitely becomes a PAGE allocation
+    //         uint32 newSize = 3 * PAGE_SIZE;
 
-            char* newPtr = krealloc(ptr, newSize);
+    //         char* newPtr = krealloc(ptr, newSize);
 
-            if (!newPtr)
-            {
-                correct = 0;
-                cprintf_colored(TEXT_TESTERR_CLR,
-                    "krealloc FAIL converting block → page at size %d\n", s);
-                break;
-            }
+    //         if (!newPtr)
+    //         {
+    //             correct = 0;
+    //             cprintf_colored(TEXT_TESTERR_CLR,
+    //                 "krealloc FAIL converting block → page at size %d\n", s);
+    //             break;
+    //         }
 
-            // verify content copy for the first block-size region
-            int sum = 0;
-            for (int i = 0; i < s/2; i++)
-                sum += newPtr[i];
+    //         // verify content copy for the first block-size region
+    //         int sum = 0;
+    //         for (int i = 0; i < s/2; i++)
+    //             sum += newPtr[i];
 
-            if (sum != (s/2 * s))
-            {
-                correct = 0;
-                cprintf_colored(TEXT_TESTERR_CLR,
-                    "Block→Page content mismatch at size %d\n", s);
-                break;
-            }
+    //         if (sum != (s/2 * s))
+    //         {
+    //             correct = 0;
+    //             cprintf_colored(TEXT_TESTERR_CLR,
+    //                 "Block→Page content mismatch at size %d\n", s);
+    //             break;
+    //         }
 
-            startBlockVAs[s] = newPtr;
-        }
+    //         startBlockVAs[s] = newPtr;
+    //     }
 
-        if (correct) eval += 20;
-    }
+    //     if (correct) eval += 20;
+    // }
 
-    // 4. Page → smaller page (shrink)
-    cprintf_colored(TEXT_cyan,"\n4. Shrink page allocations [15%]\n");
-    {
-        int correct = 1;
-        for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
-        {
-            char* ptr = startBlockVAs[s];
+    // // 4. Page → smaller page (shrink)
+    // cprintf_colored(TEXT_cyan,"\n4. Shrink page allocations [15%]\n");
+    // {
+    //     int correct = 1;
+    //     for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
+    //     {
+    //         char* ptr = startBlockVAs[s];
 
-            // shrink to 1 full page
-            uint32 newSize = PAGE_SIZE;
+    //         // shrink to 1 full page
+    //         uint32 newSize = PAGE_SIZE;
 
-            char* newPtr = krealloc(ptr, newSize);
+    //         char* newPtr = krealloc(ptr, newSize);
 
-            if (!newPtr)
-            {
-                correct = 0;
-                cprintf_colored(TEXT_TESTERR_CLR,
-                    "FAIL shrink page → smaller page for blk size %d\n", s);
-                break;
-            }
+    //         if (!newPtr)
+    //         {
+    //             correct = 0;
+    //             cprintf_colored(TEXT_TESTERR_CLR,
+    //                 "FAIL shrink page → smaller page for blk size %d\n", s);
+    //             break;
+    //         }
 
-            // Check first bytes correct
-            int sum = 0;
-            for (int i = 0; i < (s/2 < PAGE_SIZE ? s/2 : PAGE_SIZE); i++)
-                sum += newPtr[i];
+    //         // Check first bytes correct
+    //         int sum = 0;
+    //         for (int i = 0; i < (s/2 < PAGE_SIZE ? s/2 : PAGE_SIZE); i++)
+    //             sum += newPtr[i];
 
-            if (sum != (s/2 * s))
-            {
-                correct = 0;
-                cprintf_colored(TEXT_TESTERR_CLR,
-                    "Content corrupted after shrinking at blk %d\n", s);
-                break;
-            }
+    //         if (sum != (s/2 * s))
+    //         {
+    //             correct = 0;
+    //             cprintf_colored(TEXT_TESTERR_CLR,
+    //                 "Content corrupted after shrinking at blk %d\n", s);
+    //             break;
+    //         }
 
-            startBlockVAs[s] = newPtr;
-        }
+    //         startBlockVAs[s] = newPtr;
+    //     }
 
-        if (correct) eval += 15;
-    }
+    //     if (correct) eval += 15;
+    // }
 
-    // 5. Page → block transition
-    cprintf_colored(TEXT_cyan,"\n5. Realloc page → small block [15%]\n");
-    {
-        int correct = 1;
+    // // 5. Page → block transition
+    // cprintf_colored(TEXT_cyan,"\n5. Realloc page → small block [15%]\n");
+    // {
+    //     int correct = 1;
 
-        for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
-        {
-            char* ptr = startBlockVAs[s];
+    //     for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
+    //     {
+    //         char* ptr = startBlockVAs[s];
 
-            // request small block (forces block allocator)
-            uint32 newSize = s;
+    //         // request small block (forces block allocator)
+    //         uint32 newSize = s;
 
-            char* newPtr = krealloc(ptr, newSize);
+    //         char* newPtr = krealloc(ptr, newSize);
 
-            if (!newPtr)
-            {
-                correct = 0;
-                cprintf_colored(TEXT_TESTERR_CLR,
-                    "FAIL page → block krealloc at size %d\n", s);
-                break;
-            }
+    //         if (!newPtr)
+    //         {
+    //             correct = 0;
+    //             cprintf_colored(TEXT_TESTERR_CLR,
+    //                 "FAIL page → block krealloc at size %d\n", s);
+    //             break;
+    //         }
 
-            // verify content preserved
-            int sum = 0;
-            for (int i = 0; i < newSize/2; i++)
-                sum += newPtr[i];
+    //         // verify content preserved
+    //         int sum = 0;
+    //         for (int i = 0; i < newSize/2; i++)
+    //             sum += newPtr[i];
 
-            if (sum != (newSize/2 * s))
-            {
-                correct = 0;
-                cprintf_colored(TEXT_TESTERR_CLR,
-                    "Page→Block content mismatch at blk %d\n", s);
-                break;
-            }
+    //         if (sum != (newSize/2 * s))
+    //         {
+    //             correct = 0;
+    //             cprintf_colored(TEXT_TESTERR_CLR,
+    //                 "Page→Block content mismatch at blk %d\n", s);
+    //             break;
+    //         }
 
-            startBlockVAs[s] = newPtr;
-        }
+    //         startBlockVAs[s] = newPtr;
+    //     }
 
-        if (correct) eval += 15;
-    }
+    //     if (correct) eval += 15;
+    // }
 
-    // 6. Free all
-    cprintf_colored(TEXT_cyan,"\n6. Free all blocks [10%]\n");
-    {
-        for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
-            kfree(startBlockVAs[s]);
+    // // 6. Free all
+    // cprintf_colored(TEXT_cyan,"\n6. Free all blocks [10%]\n");
+    // {
+    //     for (int s = 1; s <= DYN_ALLOC_MAX_BLOCK_SIZE; s++)
+    //         kfree(startBlockVAs[s]);
 
-        int freeFramesAfter = sys_calculate_free_frames();
-        if (freeFramesAfter == origFreeFrames)
-            eval += 10;
-        else
-            cprintf_colored(TEXT_TESTERR_CLR,
-                "Final free-frame mismatch. Expected %d, got %d\n",
-                origFreeFrames, freeFramesAfter);
-    }
+    //     int freeFramesAfter = sys_calculate_free_frames();
+    //     if (freeFramesAfter == origFreeFrames)
+    //         eval += 10;
+    //     else
+    //         cprintf_colored(TEXT_TESTERR_CLR,
+    //             "Final free-frame mismatch. Expected %d, got %d\n",
+    //             origFreeFrames, freeFramesAfter);
+    // }
 
-    cprintf_colored(TEXT_light_green,
-        "\nTest krealloc Block Alloc Completed. Evaluation = %d%\n", eval);
+    // cprintf_colored(TEXT_light_green,
+    //     "\nTest krealloc Block Alloc Completed. Evaluation = %d%\n", eval);
 
-    return 0;
+    // return 0;
+	panic("not implemented function");
+
 }
 
 
