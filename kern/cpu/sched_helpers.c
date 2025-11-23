@@ -10,7 +10,7 @@
 #include <kern/cmd/command_prompt.h>
 #include <kern/cpu/cpu.h>
 
-uint32 starv_Thresh;
+#include <kern/cpu/sched_helpers.h>
 
 //void on_clock_update_WS_time_stamps();
 extern void cleanup_buffers(struct Env* e);

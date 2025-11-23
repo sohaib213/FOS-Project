@@ -7,6 +7,7 @@
 #endif
 
 #include <inc/environment_definitions.h>
+uint32 starv_Thresh;
 
 /*2023*/
 /********* for BSD Priority Scheduler *************/

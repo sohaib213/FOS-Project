@@ -11,6 +11,7 @@
 #include <kern/cpu/cpu.h>
 #include <kern/cpu/picirq.h>
 
+#include <kern/cpu/sched_helpers.h>
 
 uint32 isSchedMethodRR(){return (scheduler_method == SCH_RR);}
 uint32 isSchedMethodMLFQ(){return (scheduler_method == SCH_MLFQ); }
@@ -332,18 +333,32 @@ struct Env* fos_scheduler_PRIRR()
 	//Comment the following line
 	//panic("fos_scheduler_PRIRR() is not implemented yet...!!");
 
-		struct Env *next_env = NULL;
-		struct Env *cur_env = get_cpu_proc();
+	    struct Env *next_env = NULL;
+	    struct Env *cur_env = get_cpu_proc();
 
-		if (cur_env != NULL)
-			{
-		       	sched_insert_ready(cur_env);
-			}
 
-		next_env = dequeue(&(ProcessQueues.env_ready_queues[0]));
-		kclock_set_quantum(quantums[0]);
+	    if (cur_env != NULL)
+	    {
+	        sched_insert_ready(cur_env);
+	    }
 
-	return next_env;
+
+	    for (int i = 0; i < num_of_ready_queues; i++)
+	    {
+	        if (!LIST_EMPTY(&(ProcessQueues.env_ready_queues[i])))
+	        {
+	            next_env = dequeue(&(ProcessQueues.env_ready_queues[i]));
+	            break;
+	        }
+	    }
+
+
+	    if (next_env != NULL)
+	    {
+	        kclock_set_quantum(quantums[0]);
+	    }
+
+	    return next_env;
 }
 
 //========================================
