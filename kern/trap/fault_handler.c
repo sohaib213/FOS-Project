@@ -370,8 +370,51 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				//TODO: [PROJECT'25.IM#6] FAULT HANDLER II - #2 LRU Aging Replacement
 				//Your code is here
 				//Comment the following line
-				panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
-			}
+				//panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
+				uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
+
+				struct WorkingSetElement* currentWSelement = LIST_FIRST(&(faulted_env->page_WS_list));
+				struct WorkingSetElement* victim=currentWSelement;
+
+				if(currentWSelement!=NULL){
+					unsigned int currentWS=currentWSelement->time_stamp;
+					unsigned int minWS=currentWSelement->time_stamp;
+
+					currentWSelement = LIST_NEXT(currentWSelement);
+				    while(currentWSelement!=NULL){
+				    	currentWS=currentWSelement->time_stamp;
+				    	if(currentWS<=minWS){
+				    		minWS=currentWS;
+				    	    victim=currentWSelement;
+				    	}
+				    	currentWSelement = LIST_NEXT(currentWSelement);
+				    }
+				}
+				unmap_frame(faulted_env->env_page_directory, victim->virtual_address);
+				LIST_REMOVE(&(faulted_env->page_WS_list), victim);
+				int allocResult = alloc_page(faulted_env->env_page_directory, fault_va, permission, 0);
+				if (allocResult != 0){
+					env_exit();
+					return;
+				}
+				int mkd = pf_read_env_page(faulted_env, (void *)fault_va);
+				if (mkd == E_PAGE_NOT_EXIST_IN_PF){
+					bool is_heap = (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX);
+					bool is_stack = (fault_va >= USTACKBOTTOM && fault_va < USTACKTOP);
+
+					if (!is_heap && !is_stack)
+					{
+						env_exit();
+						return;
+					 }
+				 }
+				 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
+				 if (new_element == NULL){
+						env_exit();
+						return;
+				 }
+				 LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
+			 }
 			else if (isPageReplacmentAlgorithmModifiedCLOCK())
 			{
 				//TODO: [PROJECT'25.IM#6] FAULT HANDLER II - #3 Modified Clock Replacement
