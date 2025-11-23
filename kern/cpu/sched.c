@@ -368,6 +368,20 @@ void update_WS_time_stamps()
 	//TODO: [PROJECT'25.IM#6] FAULT HANDLER II - #1 update_WS_time_stamps
 	//Your code is here
 	//Comment the following line
-	panic("update_WS_time_stamps is not implemented yet...!!");
+	//panic("update_WS_time_stamps is not implemented yet...!!");
+	struct Env* env=get_cpu_proc();
+	struct WorkingSetElement* WSelement = LIST_FIRST(&env->page_WS_list);
 
+	while(WSelement!=NULL){
+		int per = pt_get_page_permissions(env->env_page_directory, WSelement->virtual_address);
+		int used;
+		if(per & PERM_USED){
+			used=1;
+		}else{
+			used=0;
+		}
+		WSelement->time_stamp=(WSelement->time_stamp>>1)|(used << 31);
+		pt_set_page_permissions(env->env_page_directory, WSelement->virtual_address, 0, PERM_USED);
+		WSelement = LIST_NEXT(WSelement);
+	}
 }
