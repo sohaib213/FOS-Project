@@ -374,32 +374,45 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//Comment the following line
 		//panic("clock_interrupt_handler() is not implemented yet...!!");
 
-		for (int i = 0 ; i < num_of_ready_queues ; i++)
-				{
 
-						struct Env* ptr_env = NULL;
-						LIST_FOREACH(ptr_env, &(ProcessQueues.env_ready_queues[i]))
-						{
-							uint64 time_waiting = (uint64)quantums[0] * ptr_env->nClocks;
+		        acquire_kspinlock(&(ProcessQueues.qlock));
 
-							if (time_waiting >= starv_Thresh && i != 0)
-							{
-								int old_priority = ptr_env->priority;
-								struct Env* first_env = LIST_FIRST(&ProcessQueues.env_ready_queues[i - 1]);
-                                ptr_env->priority = first_env->priority;
+		        for (int i = 0; i < num_of_ready_queues; i++)
+		        {
+		            struct Env* ptr_env = NULL;
+		            struct Env* promote_env = NULL;
 
-                                if(ptr_env->env_status == ENV_READY)
-                                	{
-                                		update_Location_inReadyQueues(ptr_env, old_priority);
-                                	}
+		            LIST_FOREACH(ptr_env, &(ProcessQueues.env_ready_queues[i]))
+		            {
+		                ptr_env->nClocks++;
 
-							}
-						}
+		                uint64 time_waiting = (uint64)quantums[0] * ptr_env->nClocks;
+
+		                if (time_waiting >= starv_Thresh && ptr_env->priority > 0)
+		                {
+		                    promote_env = ptr_env;
+		                    break;
+		                }
+		            }
+
+		            if (promote_env != NULL)
+		            {
+		                int old_priority = promote_env->priority;
 
 
-				}
+		                promote_env->priority = old_priority - 1;
 
-	}
+		                LIST_REMOVE(&(ProcessQueues.env_ready_queues[old_priority]), promote_env);
+
+		                LIST_INSERT_TAIL(&(ProcessQueues.env_ready_queues[promote_env->priority]), promote_env);
+
+		                promote_env->nClocks = 0;
+		            }
+		        }
+
+		        release_kspinlock(&(ProcessQueues.qlock));
+		    }
+
 
 	/********DON'T CHANGE THESE LINES***********/
 	ticks++ ;

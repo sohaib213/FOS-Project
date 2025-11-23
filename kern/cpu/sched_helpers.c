@@ -697,22 +697,41 @@ void env_set_priority(int envID, int priority)
 	//Comment the following line
 	//panic("env_set_priority() is not implemented yet...!!");
 
+	    acquire_kspinlock(&(ProcessQueues.qlock));
 
-	acquire_kspinlock(&(ProcessQueues.qlock));
+	    struct Env* ptr_env = NULL;
+	    int result = envid2env(envID, &ptr_env, 0);
 
-	struct Env* ptr_env = NULL;
-	envid2env(envID, &ptr_env, 0 );
 
-	assert(ptr_env != NULL);
-	int old_priority = ptr_env->priority;
-	ptr_env->priority = priority;
+	    if (result < 0 || ptr_env == NULL)
+	    {
+	        release_kspinlock(&(ProcessQueues.qlock));
+	        return;
+	    }
 
-	if(ptr_env->env_status == ENV_READY)
-	{
-		update_Location_inReadyQueues(ptr_env, old_priority);
-	}
+	    int old_priority = ptr_env->priority;
 
-	release_kspinlock(&(ProcessQueues.qlock));
+	    if (old_priority == priority)
+	    {
+	        release_kspinlock(&(ProcessQueues.qlock));
+	        return;
+	    }
+
+	    if (priority < 0 || priority >= num_of_ready_queues)
+	    {
+	        release_kspinlock(&(ProcessQueues.qlock));
+	        return;
+	    }
+
+	    ptr_env->priority = priority;
+
+	    if (ptr_env->env_status == ENV_READY)
+	    {
+	        update_Location_inReadyQueues(ptr_env, old_priority);
+	    }
+
+	    release_kspinlock(&(ProcessQueues.qlock));
+
 }
 void update_Location_inReadyQueues(struct Env* env, int old_priority)
 {
@@ -724,11 +743,6 @@ void update_Location_inReadyQueues(struct Env* env, int old_priority)
 	    assert(env != NULL);
 	    assert(env->env_status == ENV_READY);
 
-	    struct Env* first_env = LIST_FIRST(&ProcessQueues.env_ready_queues[0]);
-	    if(old_priority == first_env->priority)
-	    {
-	    	return;
-	    }
 	    if (env->priority == old_priority)
 	        return;
 
