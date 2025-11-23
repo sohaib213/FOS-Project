@@ -222,15 +222,31 @@ void sched_init_BSD(uint8 numOfLevels, uint8 quantum)
 //======================================
 void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 {
-	{
+
 		//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #2 sched_init_PRIRR
 		//Your code is here
 		//Comment the following line
-		panic("sched_init_PRIRR() is not implemented yet...!!");
+		//panic("sched_init_PRIRR() is not implemented yet...!!");
 
+		num_of_ready_queues = numOfPriorities;
 
+		#if USE_KHEAP
 
-	}
+		    sched_delete_ready_queues();
+
+		    ProcessQueues.env_ready_queues = kmalloc(num_of_ready_queues * sizeof(struct Env_Queue));
+		    quantums = kmalloc(num_of_ready_queues * sizeof(uint8));
+		#endif
+
+		    quantums[0] = quantum;
+		    kclock_set_quantum(quantums[0]);
+		    for (int i = 0; i < num_of_ready_queues; i++)
+		    {
+		        init_queue(&(ProcessQueues.env_ready_queues[i]));
+		    }
+
+		    sched_set_starv_thresh(starvThresh);
+
 	//=========================================
 	//DON'T CHANGE THESE LINES=================
 	uint16 cnt0 = kclock_read_cnt0_latch() ; //read after write to ensure it's set to the desired value
@@ -314,7 +330,20 @@ struct Env* fos_scheduler_PRIRR()
 	//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #3 fos_scheduler_PRIRR
 	//Your code is here
 	//Comment the following line
-	panic("fos_scheduler_PRIRR() is not implemented yet...!!");
+	//panic("fos_scheduler_PRIRR() is not implemented yet...!!");
+
+		struct Env *next_env = NULL;
+		struct Env *cur_env = get_cpu_proc();
+
+		if (cur_env != NULL)
+			{
+		       	sched_insert_ready(cur_env);
+			}
+
+		next_env = dequeue(&(ProcessQueues.env_ready_queues[0]));
+		kclock_set_quantum(quantums[0]);
+
+	return next_env;
 }
 
 //========================================
@@ -328,9 +357,32 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #4 clock_interrupt_handler
 		//Your code is here
 		//Comment the following line
-		panic("clock_interrupt_handler() is not implemented yet...!!");
+		//panic("clock_interrupt_handler() is not implemented yet...!!");
+
+		for (int i = 0 ; i < num_of_ready_queues ; i++)
+				{
+
+						struct Env* ptr_env = NULL;
+						LIST_FOREACH(ptr_env, &(ProcessQueues.env_ready_queues[i]))
+						{
+							uint64 time_waiting = (uint64)quantums[0] * ptr_env->nClocks;
+
+							if (time_waiting >= starv_Thresh && i != 0)
+							{
+								int old_priority = ptr_env->priority;
+								struct Env* first_env = LIST_FIRST(&ProcessQueues.env_ready_queues[i - 1]);
+                                ptr_env->priority = first_env->priority;
+
+                                if(ptr_env->env_status == ENV_READY)
+                                	{
+                                		update_Location_inReadyQueues(ptr_env, old_priority);
+                                	}
+
+							}
+						}
 
 
+				}
 
 	}
 

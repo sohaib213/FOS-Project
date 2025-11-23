@@ -10,6 +10,8 @@
 #include <kern/cmd/command_prompt.h>
 #include <kern/cpu/cpu.h>
 
+uint32 starv_Thresh;
+
 //void on_clock_update_WS_time_stamps();
 extern void cleanup_buffers(struct Env* e);
 //================
@@ -693,12 +695,66 @@ void env_set_priority(int envID, int priority)
 	//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #1 env_set_priority
 	//Your code is here
 	//Comment the following line
-	panic("env_set_priority() is not implemented yet...!!");
+	//panic("env_set_priority() is not implemented yet...!!");
+
+
+	acquire_kspinlock(&(ProcessQueues.qlock));
+
+	struct Env* ptr_env = NULL;
+	envid2env(envID, &ptr_env, 0 );
+
+	assert(ptr_env != NULL);
+	int old_priority = ptr_env->priority;
+	ptr_env->priority = priority;
+
+	if(ptr_env->env_status == ENV_READY)
+	{
+		update_Location_inReadyQueues(ptr_env, old_priority);
+	}
+
+	release_kspinlock(&(ProcessQueues.qlock));
+}
+void update_Location_inReadyQueues(struct Env* env, int old_priority)
+{
+
+
+	    if(!holding_kspinlock(&ProcessQueues.qlock))
+	        panic("sched: q.lock is not held by this CPU while it's expected to be.");
+
+	    assert(env != NULL);
+	    assert(env->env_status == ENV_READY);
+
+	    struct Env* first_env = LIST_FIRST(&ProcessQueues.env_ready_queues[0]);
+	    if(old_priority == first_env->priority)
+	    {
+	    	return;
+	    }
+	    if (env->priority == old_priority)
+	        return;
+
+	    sched_remove_ready(env);
+
+	    sched_insert_ready(env);
+
 }
 void sched_set_starv_thresh(uint32 starvThresh)
 {
 	//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #1 sched_set_starv_thresh
 	//Your code is here
 	//Comment the following line
-	panic("sched_set_starv_thresh() is not implemented yet...!!");
+	//panic("sched_set_starv_thresh() is not implemented yet...!!");
+
+
+
+	    if (starvThresh == 0)
+	    {
+	        panic("sched_set_starv_thresh: starvation threshold cannot be 0!");
+	    }
+
+	    acquire_kspinlock(&(ProcessQueues.qlock));
+
+	    starv_Thresh = starvThresh;
+
+	    release_kspinlock(&(ProcessQueues.qlock));
+
 }

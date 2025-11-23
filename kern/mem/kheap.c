@@ -93,7 +93,7 @@ void* kmalloc(unsigned int size)
 		int i = 0;
 		// cprintf("Before \n");
 		// cprintf("kheapPageAllocBreak = %p \n", kheapPageAllocBreak);
-		
+
 		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak;)
 		{
 			// cprintf("currentAddress = %p\n", currentAddress);
@@ -124,12 +124,12 @@ void* kmalloc(unsigned int size)
 				struct pageInfo *maxSizePage = &pagesInfo[getPagesInfoIndex(maxSizeAddress)], *nextPage, *splitAddress;
 				splitAddress = &pagesInfo[getPagesInfoIndex(maxSizeAddress + size)];
 				nextPage = &pagesInfo[getPagesInfoIndex(maxSizeAddress + maxSizePage->size)];
-	
+
 				splitAddress->size = maxSizePage->size - size;
 				splitAddress->prevPageStartAddress = maxSizeAddress;
-	
+
 				nextPage->prevPageStartAddress = maxSizeAddress + size;
-	
+
 				maxSizePage->isBlocked = 1;
 				maxSizePage->size = size;
 			}
@@ -138,13 +138,13 @@ void* kmalloc(unsigned int size)
 				{
 					return NULL;
 				}
-	
+
 				resultAddress = kheapPageAllocBreak;
 				struct pageInfo *page = &pagesInfo[getPagesInfoIndex(resultAddress)];
 				page->isBlocked = 1;
 				page->size = size;
 				page->prevPageStartAddress = lastAddress;
-	
+
 				kheapPageAllocBreak += size;
 			}
 		}
@@ -163,7 +163,7 @@ void* kmalloc(unsigned int size)
 		// cprintf("Result address = %p\n", resultAddress);
 		return (void*)resultAddress;
 	}
-	
+
 	if (!lock_already_held)
 	{
 		release_kspinlock(&MemFrameLists.mfllock);
@@ -300,7 +300,7 @@ void kfree(void* virtual_address)
 				pageToDelete->size = 0;
 			}
 		}
-		
+
 		pageToDelete->isBlocked = 0;
 	}
 	else{
@@ -400,13 +400,13 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	{
 		return kmalloc(new_size);
 	}
-	
+
 	if(new_size == 0)
 	{
 		kfree(virtual_address);
 		return NULL;
 	}
-	
+
 	uint32 va = (uint32)virtual_address;
 	// new size is block
 	if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
@@ -462,14 +462,14 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		// alloc more frames
 		uint32 sizeNeeded = new_size - oldProgramm->size;
 		uint32 sizeNeededWillNotBeChanged = sizeNeeded;
-		
+
 		struct pageInfo *before = NULL, *after = NULL;
 		// cprintf("va before = %p\n", va);
 		// cprintf("kheapPageAllocStart = %p\n", kheapPageAllocStart);
 
 		if(va != kheapPageAllocStart)
 		{
-			// cprintf("ENTERED\n"); 
+			// cprintf("ENTERED\n");
 			before = &pagesInfo[getPagesInfoIndex(oldProgramm->prevPageStartAddress)];
 		}
 		if(va + oldProgramm->size != kheapPageAllocBreak)
@@ -489,7 +489,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				}
 				else
 				{
-					
+
 					cprintf("before address = %p\n", oldProgramm->prevPageStartAddress);
 					cprintf("before index = %d\n", getPagesInfoIndex(oldProgramm->prevPageStartAddress));
 					cprintf("va = %p\n", va);
@@ -502,7 +502,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				}
 			}
 		}
-		
+
 		uint8 afterCondition = 0;
 		uint32 sizeToAllocAfter = 0;
 		if(after != NULL && sizeNeeded != 0)
@@ -524,7 +524,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			}
 		}
 		// cprintf("Here 4\n");
-		
+
 		if(after == NULL)
 		{
 			if(KERNEL_HEAP_MAX - kheapPageAllocBreak >= sizeNeeded)
@@ -539,7 +539,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				afterCondition = 2;
 			}
 		}
-		
+
 		// cprintf("Here 5\n");
 
 		if(sizeNeeded == 0)
@@ -653,7 +653,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		// cprintf("sizeToDelete = %d\n", sizeToDelete);
 		struct pageInfo *splitPoint;
 		splitPoint = &pagesInfo[getPagesInfoIndex(va + new_size)];
-	
+
 		struct pageInfo *after = &pagesInfo[getPagesInfoIndex(va + oldProgramm->size)];
 		if(after->isBlocked){
 			splitPoint->size = sizeToDelete;
@@ -678,11 +678,11 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				after->prevPageStartAddress = 0;
 			}
 		}
-	
+
 		for(uint32 currentAddress = va + new_size; currentAddress < va + oldProgramm->size; currentAddress += PAGE_SIZE){
 			unmap_frame(ptr_page_directory, currentAddress);
 		}
-	
+
 		oldProgramm->size -= sizeToDelete;
 		return (void *)va;
 	}

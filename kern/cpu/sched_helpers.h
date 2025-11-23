@@ -18,6 +18,7 @@ int get_load_average() ;
 
 /*2024*/
 void env_set_priority(int envID, int priority);
+void update_Location_inReadyQueues(struct Env* env, int old_priority);
 void sched_set_starv_thresh(uint32 starvThresh);
 
 
