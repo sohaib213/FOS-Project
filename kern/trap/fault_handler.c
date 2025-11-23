@@ -383,7 +383,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 					currentWSelement = LIST_NEXT(currentWSelement);
 				    while(currentWSelement!=NULL){
 				    	currentWS=currentWSelement->time_stamp;
-				    	if(currentWS<=minWS){
+				    	if(currentWS<minWS){
 				    		minWS=currentWS;
 				    	    victim=currentWSelement;
 				    	}
