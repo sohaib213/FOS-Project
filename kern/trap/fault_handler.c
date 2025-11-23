@@ -390,6 +390,13 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				    	currentWSelement = LIST_NEXT(currentWSelement);
 				    }
 				}
+				int pers=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
+				if(pers&PERM_MODIFIED){
+					uint32* ptr;
+					struct FrameInfo* frame=get_frame_info(faulted_env->env_page_directory, victim->virtual_address, &ptr);
+					pf_update_env_page(faulted_env, victim->virtual_address, frame);
+				}
+
 				unmap_frame(faulted_env->env_page_directory, victim->virtual_address);
 				LIST_REMOVE(&(faulted_env->page_WS_list), victim);
 				int allocResult = alloc_page(faulted_env->env_page_directory, fault_va, permission, 0);
