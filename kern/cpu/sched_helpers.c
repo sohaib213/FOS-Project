@@ -700,30 +700,11 @@ void env_set_priority(int envID, int priority)
 	    acquire_kspinlock(&(ProcessQueues.qlock));
 
 	    struct Env* ptr_env = NULL;
-	    int result = envid2env(envID, &ptr_env, 0);
-
-
-	    if (result < 0 || ptr_env == NULL)
-	    {
-	        release_kspinlock(&(ProcessQueues.qlock));
-	        return;
-	    }
+	     envid2env(envID, &ptr_env, 0);
 
 	    int old_priority = ptr_env->priority;
-
-	    if (old_priority == priority)
-	    {
-	        release_kspinlock(&(ProcessQueues.qlock));
-	        return;
-	    }
-
-	    if (priority < 0 || priority >= num_of_ready_queues)
-	    {
-	        release_kspinlock(&(ProcessQueues.qlock));
-	        return;
-	    }
-
 	    ptr_env->priority = priority;
+
 
 	    if (ptr_env->env_status == ENV_READY)
 	    {
