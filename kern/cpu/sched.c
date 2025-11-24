@@ -257,7 +257,6 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 	//=========================================
 	//=========================================
 }
-
 //=========================
 // [7] RR Scheduler:
 //=========================
@@ -324,10 +323,10 @@ struct Env* fos_scheduler_BSD()
 //=============================
 struct Env* fos_scheduler_PRIRR()
 {
-	/*To protect process Qs (or info of current process) in multi-CPU************************/
+	/*To protect process Qs (or info of current process) in multi-CPU*/
 	if(!holding_kspinlock(&ProcessQueues.qlock))
 		panic("fos_scheduler_PRIRR: q.lock is not held by this CPU while it's expected to be.");
-	/****************************************************************************************/
+	//
 	//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #3 fos_scheduler_PRIRR
 	//Your code is here
 	//Comment the following line
