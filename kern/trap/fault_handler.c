@@ -183,7 +183,7 @@ void fault_handler(struct Trapframe *tf)
 			// Check if inside user heap but unmarked
 
 			if (!user && fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX) {
-				cprintf("Invalid pointer: unmapped page at %x\n", fault_va);
+				// cprintf("Invalid pointer: unmapped page at %x\n", fault_va);
 				env_exit();
 				return;
 			}
@@ -191,7 +191,7 @@ void fault_handler(struct Trapframe *tf)
 
 			// Check if it's a write fault but page is not writable
 			if (present && !write) {
-				cprintf("Invalid pointer: write to read-only page at %x\n", fault_va);
+				// cprintf("Invalid pointer: write to read-only page at %x\n", fault_va);
 				env_exit();
 				return;
 			}

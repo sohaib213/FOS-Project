@@ -8,6 +8,8 @@
 #include "../conc/kspinlock.h"
 
 struct pageInfo pagesInfo[KHP_PAGES_AREA_NUMBER];
+struct kspinlock kheapLock;
+
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -31,7 +33,7 @@ void kheap_init()
 	//==================================================================================
 	//==================================================================================
 	// memset(programmsSizes, 0, KHP_PAGES_AREA_NUMBER * sizeof(uint32));
-
+	init_kspinlock(&kheapLock, "kheap lock");
 }
 
 //==============================================
@@ -64,21 +66,19 @@ void* kmalloc(unsigned int size)
 	//Comment the following line
 	// kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
-	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
+	acquire_kspinlock(&kheapLock);
 
-	if (!lock_already_held)
-	{
-		acquire_kspinlock(&MemFrameLists.mfllock);
-	}
 
 	if(size > (KERNEL_HEAP_MAX - kheapPageAllocStart))
 	{
+		release_kspinlock(&kheapLock);
 		return NULL;
 	}
 
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
 		uint32* a = alloc_block(size);
+		release_kspinlock(&kheapLock);
 		if(a == NULL)
 			return NULL;
 		else
@@ -136,6 +136,7 @@ void* kmalloc(unsigned int size)
 			else{
 				if(KERNEL_HEAP_MAX - kheapPageAllocBreak < size)
 				{
+					release_kspinlock(&kheapLock);
 					return NULL;
 				}
 
@@ -152,22 +153,21 @@ void* kmalloc(unsigned int size)
 		bool a = allocFrames(resultAddress, resultAddress + size);
 		if(!a)
 		{
+			release_kspinlock(&kheapLock);
 			return NULL;
 		}
 
 
-		if (!lock_already_held)
-		{
-			release_kspinlock(&MemFrameLists.mfllock);
-		}
+
+		release_kspinlock(&kheapLock);
+		// cprintf("Released = %p\n");
 		// cprintf("Result address = %p\n", resultAddress);
 		return (void*)resultAddress;
 	}
 
-	if (!lock_already_held)
-	{
-		release_kspinlock(&MemFrameLists.mfllock);
-	}
+	
+	release_kspinlock(&kheapLock);
+	
 	return NULL;
 	//TODO: [PROJECT'25.BONUS#3] FAST PAGE ALLOCATOR
 }
@@ -182,20 +182,12 @@ void kfree(void* virtual_address)
 	//Comment the following line
 	// panic("kfree() is not implemented yet...!!");
 
-	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
-
-	if (!lock_already_held)
-	{
-		acquire_kspinlock(&MemFrameLists.mfllock);
-	}
-
+	acquire_kspinlock(&kheapLock);
 	if(virtual_address == NULL)
 	{
-			if (!lock_already_held)
-			{
-				release_kspinlock(&MemFrameLists.mfllock);
-			}
-			panic("kfree() error: NULL pointer passed!");
+		release_kspinlock(&kheapLock);
+		
+		panic("kfree() error: NULL pointer passed!");
 	}
 
 
@@ -209,10 +201,7 @@ void kfree(void* virtual_address)
 			// This is a small block allocation
 			free_block(virtual_address);
 
-			if (!lock_already_held)
-			{
-					release_kspinlock(&MemFrameLists.mfllock);
-			}
+			release_kspinlock(&kheapLock);
 			return;
 	}
 
@@ -229,8 +218,7 @@ void kfree(void* virtual_address)
 		// If size is 0, this block was not allocated
 		if(pageToDelete->size == 0 || !pageToDelete->isBlocked)
 		{
-				if (!lock_already_held)
-						release_kspinlock(&MemFrameLists.mfllock);
+				release_kspinlock(&kheapLock);
 				panic("kfree() error: trying to free unallocated block!");
 		}
 
@@ -307,10 +295,7 @@ void kfree(void* virtual_address)
 		panic("kfree() error: invalid virtual address!");
 	}
 	// If we reach here, the address is invalid
-	if (!lock_already_held)
-	{
-		release_kspinlock(&MemFrameLists.mfllock);
-	}
+	release_kspinlock(&kheapLock);
 	return;
 }
 
@@ -389,20 +374,20 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//Your code is here
 	//Comment the following line
 	// panic("krealloc() is not implemented yet...!!");
-	bool lock_already_held = holding_kspinlock(&MemFrameLists.mfllock);
 
-	if (!lock_already_held)
-	{
-		acquire_kspinlock(&MemFrameLists.mfllock);
-	}
+
+	acquire_kspinlock(&kheapLock);
+	
 	// cprintf("Size = %d\n", new_size);
 	if(virtual_address == NULL)
 	{
+		release_kspinlock(&kheapLock);
 		return kmalloc(new_size);
 	}
 
 	if(new_size == 0)
 	{
+		release_kspinlock(&kheapLock);
 		kfree(virtual_address);
 		return NULL;
 	}
@@ -414,6 +399,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		uint32* vaResult = alloc_block(new_size);
 		if(vaResult == NULL)
 		{
+			release_kspinlock(&kheapLock);
 			return NULL;
 		}
 		// old size was block
@@ -429,6 +415,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			memcpy((void *)vaResult, (const void*)va, pagesInfo[getPagesInfoIndex(va)].size);
 			kfree(virtual_address);
 		}
+		release_kspinlock(&kheapLock);
 		return (void *) vaResult;
 	}
 
@@ -439,10 +426,12 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		void * vaRes = kmalloc(new_size);
 		if(vaRes == NULL)
 		{
+			release_kspinlock(&kheapLock);
 			return virtual_address;
 		}
 		memcpy((void *)vaRes, (const void*)va, get_block_size(virtual_address));
 		free_block(virtual_address);
+		release_kspinlock(&kheapLock);
 		return vaRes;
 	}
 
@@ -454,6 +443,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	}
 	if(new_size == oldProgramm->size)
 	{
+		release_kspinlock(&kheapLock);
 		return virtual_address;
 	}
 	else if(new_size > oldProgramm->size)
@@ -591,6 +581,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				oldProgramm = before;
 				if(!a)
 				{
+					release_kspinlock(&kheapLock);
 					return NULL;
 				}
 			}
@@ -636,13 +627,18 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				after->prevPageStartAddress = 0;
 			}
 
+			release_kspinlock(&kheapLock);
 			return (void *)startAddress;
 		}else{
 			void* vaResult = kmalloc(new_size);
 			memcpy(vaResult, (const void*)va, oldProgramm->size);
 
 			if(vaResult == NULL)
+			{
+				release_kspinlock(&kheapLock);
 				return NULL;
+			}
+			release_kspinlock(&kheapLock);
 			kfree(virtual_address);
 			return vaResult;
 		}
@@ -684,14 +680,11 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		}
 
 		oldProgramm->size -= sizeToDelete;
+		release_kspinlock(&kheapLock);
 		return (void *)va;
 	}
 
-	if (!lock_already_held)
-	{
-		release_kspinlock(&MemFrameLists.mfllock);
-	}
-
+	release_kspinlock(&kheapLock);
 		// cprintf("Here 8\n");
 	return NULL;
 }

@@ -1059,17 +1059,17 @@ void initialize_environment(struct Env* e, uint32* ptr_user_page_directory, unsi
 		
 		memset(e->context, 0, sizeof(*(e->context)));
 		e->context->eip = (uint32) (env_start);
-		cprintf("END CREATING\n");
+		// cprintf("END CREATING\n");
 
 	}
 
 	// Allocate the page working set
 #if USE_KHEAP == 1
 	{
-		cprintf("BEFORE 1\n");
+		// cprintf("BEFORE 1\n");
 		LIST_INIT(&(e->page_WS_list));
 		LIST_INIT(&(e->referenceStreamList));
-		cprintf("AFTER 1\n");
+		// cprintf("AFTER 1\n");
 	}
 #else
 	{
