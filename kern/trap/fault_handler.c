@@ -371,8 +371,6 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				//Your code is here
 				//Comment the following line
 				//panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
-				uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
-
 				struct WorkingSetElement* currentWSelement = LIST_FIRST(&(faulted_env->page_WS_list));
 				struct WorkingSetElement* victim=currentWSelement;
 
@@ -390,6 +388,9 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				    	currentWSelement = LIST_NEXT(currentWSelement);
 				    }
 				}
+
+				//Replacement
+				uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
 				int pers=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
 				if(pers&PERM_MODIFIED){
 					uint32* ptr;
