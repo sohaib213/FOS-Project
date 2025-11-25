@@ -429,6 +429,11 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				//Your code is here
 				//Comment the following line
 				//panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
+
+				// DEBUG START
+				    cprintf("MODCLOCK: START lastWS=%x\n", faulted_env->page_last_WS_element);
+				// END DEBUG
+
 				struct WorkingSetElement* victim=faulted_env->page_last_WS_element;
 				struct WorkingSetElement* next;
 				int flag=0;
@@ -438,12 +443,23 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				}
 				struct WorkingSetElement* startPtr=victim;
 
+				// DEBUG
+				    cprintf("MODCLOCK: startPtr=%x victim=%x\n", startPtr, victim);
+
 
 				do{
 					int per=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
 					int used = per & PERM_USED;
 					int modified   = per & PERM_MODIFIED;
+
+					// DEBUG iteration
+					       cprintf("TRY1: check va=%x used=%d mod=%d\n",victim->virtual_address,used ? 1 : 0,modified ? 1 : 0);
+
 					if(used==0 && modified==0){
+
+						// DEBUG hit
+						      cprintf("TRY1: HIT va=%x\n", victim->virtual_address);
+
 						flag=1;
 						next=LIST_NEXT(victim);
 						if(next==NULL){
@@ -477,6 +493,10 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 					    }
 						LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
 						faulted_env->page_last_WS_element=next;
+
+						// DEBUG update
+						     cprintf("SET lastWS=%x\n", next);
+
 						break;
 					}else{
 						victim=LIST_NEXT(victim);
@@ -488,12 +508,24 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 
 
 				if(flag==0){
+
+					// DEBUG
+					    cprintf("TRY1: NO HIT, go to TRY2\n");
+
 					//Normal Clock Replacement Algorithm
 					do{
 						int per=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
 						int used = per & PERM_USED;
 						int modified   = per & PERM_MODIFIED;
+
+						// DEBUG iteration
+						      cprintf("TRY2: check va=%x used=%d mod=%d\n",victim->virtual_address,used ? 1 : 0,modified ? 1 : 0);
+
 						if(used==0){
+
+							// DEBUG hit
+							    cprintf("TRY2: HIT va=%x\n", victim->virtual_address);
+
 							next=LIST_NEXT(victim);
 							if(next==NULL){
 								next=LIST_FIRST(&(faulted_env->page_WS_list));
@@ -534,6 +566,10 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 							}
 							LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
 							faulted_env->page_last_WS_element=next;
+
+							 // DEBUG update
+							      cprintf("SET lastWS=%x\n", next);
+
 							break;
 						 }else{
 							pt_set_page_permissions(faulted_env->env_page_directory, victim->virtual_address, 0, PERM_USED);
@@ -544,6 +580,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 						 }
 					  }while(victim!=startPtr);
 				}
+				 // DEBUG END
+				    cprintf("MODCLOCK: DONE\n");
 			}
 		}
 	}
