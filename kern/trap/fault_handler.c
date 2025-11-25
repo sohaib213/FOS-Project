@@ -389,8 +389,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				    }
 				}
 
-				//Replacement
-				uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
+				//Writing to the disc before replacement
 				int pers=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
 				if(pers&PERM_MODIFIED){
 					uint32* ptr;
@@ -398,6 +397,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 					pf_update_env_page(faulted_env, victim->virtual_address, frame);
 				}
 
+				//Replacement
+				uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
 				unmap_frame(faulted_env->env_page_directory, victim->virtual_address);
 				LIST_REMOVE(&(faulted_env->page_WS_list), victim);
 				int allocResult = alloc_page(faulted_env->env_page_directory, fault_va, permission, 0);
@@ -410,11 +411,10 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 					bool is_heap = (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX);
 					bool is_stack = (fault_va >= USTACKBOTTOM && fault_va < USTACKTOP);
 
-					if (!is_heap && !is_stack)
-					{
+					if (!is_heap && !is_stack){
 						env_exit();
 						return;
-					 }
+					}
 				 }
 				 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
 				 if (new_element == NULL){
@@ -428,7 +428,122 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				//TODO: [PROJECT'25.IM#6] FAULT HANDLER II - #3 Modified Clock Replacement
 				//Your code is here
 				//Comment the following line
-				panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
+				//panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
+				struct WorkingSetElement* victim=faulted_env->page_last_WS_element;
+				struct WorkingSetElement* next;
+				int flag=0;
+
+				if(victim==NULL){
+					victim=LIST_FIRST(&(faulted_env->page_WS_list));
+				}
+				struct WorkingSetElement* startPtr=victim;
+
+
+				do{
+					int per=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
+					int used = per & PERM_USED;
+					int modified   = per & PERM_MODIFIED;
+					if(used==0 && modified==0){
+						flag=1;
+						next=LIST_NEXT(victim);
+						if(next==NULL){
+							next=LIST_FIRST(&(faulted_env->page_WS_list));
+						}
+
+
+						//Replacement
+						uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
+						unmap_frame(faulted_env->env_page_directory, victim->virtual_address);
+						LIST_REMOVE(&(faulted_env->page_WS_list), victim);
+						int allocResult = alloc_page(faulted_env->env_page_directory, fault_va, permission, 0);
+						if (allocResult != 0){
+							env_exit();
+							return;
+						}
+						int mkd = pf_read_env_page(faulted_env, (void *)fault_va);
+						if (mkd == E_PAGE_NOT_EXIST_IN_PF){
+							bool is_heap = (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX);
+						    bool is_stack = (fault_va >= USTACKBOTTOM && fault_va < USTACKTOP);
+
+						    if (!is_heap && !is_stack){
+						    	env_exit();
+							    return;
+						    }
+					    }
+						struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
+						if (new_element == NULL){
+							env_exit();
+							return;
+					    }
+						LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
+						faulted_env->page_last_WS_element=next;
+						break;
+					}else{
+						victim=LIST_NEXT(victim);
+						if(victim==NULL){
+							victim=LIST_FIRST(&(faulted_env->page_WS_list));
+						}
+					}
+				}while(victim!=startPtr);
+
+
+				if(flag==0){
+					//Normal Clock Replacement Algorithm
+					do{
+						int per=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
+						int used = per & PERM_USED;
+						int modified   = per & PERM_MODIFIED;
+						if(used==0){
+							next=LIST_NEXT(victim);
+							if(next==NULL){
+								next=LIST_FIRST(&(faulted_env->page_WS_list));
+							}
+
+
+							//Writing to the disc before replacement
+							int pers=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
+							if(pers & PERM_MODIFIED){
+								uint32* ptr;
+								struct FrameInfo* frame=get_frame_info(faulted_env->env_page_directory, victim->virtual_address, &ptr);
+								pf_update_env_page(faulted_env, victim->virtual_address, frame);
+							}
+
+							//Replacement
+							uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
+							unmap_frame(faulted_env->env_page_directory, victim->virtual_address);
+							LIST_REMOVE(&(faulted_env->page_WS_list), victim);
+							int allocResult = alloc_page(faulted_env->env_page_directory, fault_va, permission, 0);
+							if (allocResult != 0){
+								env_exit();
+								return;
+							}
+							int mkd = pf_read_env_page(faulted_env, (void *)fault_va);
+							if (mkd == E_PAGE_NOT_EXIST_IN_PF){
+								bool is_heap = (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX);
+							    bool is_stack = (fault_va >= USTACKBOTTOM && fault_va < USTACKTOP);
+
+							    if (!is_heap && !is_stack){
+							    	env_exit();
+								    return;
+							    }
+							}
+							struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
+							if (new_element == NULL){
+								env_exit();
+								return;
+							}
+							LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
+							faulted_env->page_last_WS_element=next;
+							break;
+						 }else{
+							pt_set_page_permissions(faulted_env->env_page_directory, victim->virtual_address, 0, PERM_USED);
+							victim=LIST_NEXT(victim);
+							if(victim==NULL){
+								victim=LIST_FIRST(&(faulted_env->page_WS_list));
+							}
+						 }
+					  }while(victim!=startPtr);
+				}
 			}
 		}
 	}
