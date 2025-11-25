@@ -951,13 +951,14 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	// cprintf("KERNEL STACK TOP = %p\n", KERN_STACK_TOP);
 	//  mapping stack
 	// cprintf("ptr Page direcotry from create stack = %p/n", ptr_user_page_directory);
-	for(int i = 0; i < PAGES ; i++){
-		Virtual_ad = __cur_k_stk - (i + 1) * PAGE_SIZE;
-		// cprintf("Debug: Mapping frame %d to virtual address %p\n", i, Virtual_ad);
-		// map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
-		
-		alloc_page(ptr_user_page_directory, Virtual_ad, perm, 1);
-	}
+	// for(int i = 0; i < PAGES ; i++){
+	// 	Virtual_ad = __cur_k_stk - (i + 1) * PAGE_SIZE;
+	// 	// cprintf("Debug: Mapping frame %d to virtual address %p\n", i, Virtual_ad);
+	// 	// map_frame(ptr_user_page_directory, Frame_arr[i], Virtual_ad, perm);
+
+	// 	alloc_page(ptr_user_page_directory, Virtual_ad, perm, 1);
+	// }
+	Virtual_ad = (uint32)(kmalloc(KERNEL_STACK_SIZE));
 	uint32* ptr_table ;
 	uint32 ret =  get_page_table(ptr_user_page_directory, Virtual_ad, &ptr_table);
 	uint32 index_page_table = PTX(Virtual_ad);
@@ -968,8 +969,8 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 
 
 	// cprintf("Debug: User kernel stack created. Start address (after guard page) = 0x%x\n", Virtual_ad);
-	__cur_k_stk -= KERNEL_STACK_SIZE;
-	return (void *)(__cur_k_stk);
+	// __cur_k_stk -= KERNEL_STACK_SIZE;
+	return (void *)(Virtual_ad);
 
 	//allocate space for the user kernel stack.
 	//remember to leave its bottom page as a GUARD PAGE (i.e. not mapped)
@@ -1056,7 +1057,7 @@ void initialize_environment(struct Env* e, uint32* ptr_user_page_directory, unsi
 
 		//[4] Setup the context to return to env_start() at the early first run from the scheduler
 		// cprintf("START\n");
-		
+
 		memset(e->context, 0, sizeof(*(e->context)));
 		e->context->eip = (uint32) (env_start);
 		// cprintf("END CREATING\n");
