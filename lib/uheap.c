@@ -70,16 +70,19 @@ void* malloc(uint32 size)
 	}
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
-		cprintf("size = %d\n", size);
+		// cprintf("size = %d\n", size);
 		uint32* a = alloc_block(size);
-		cprintf("return add = %p\n\n", (uint32)a);
+		// cprintf("return add = %p\n\n", (uint32)a);
 
+
+		// cprintf("va from alloc block = %p\n", (uint32)a);
 		if(a == NULL)
 			return NULL;
-		else
+		else if ((uint32) a == ROUNDDOWN((uint32)a, PAGE_SIZE))
 		{
 			sys_allocate_user_mem((uint32) a, size);
-			return (void *)a;}
+		}
+		return (void *)a;
 	}else{
 		size = ROUNDUP(size, PAGE_SIZE);
 		uint32 maxSize = 0, maxSizeAddress;
