@@ -12,6 +12,8 @@
 #include "../cpu/cpu.h"
 #include "../proc/user_environment.h"
 
+
+
 void init_sleeplock(struct sleeplock *lk, char *name)
 {
 	init_channel(&(lk->chan), "sleep lock channel");
@@ -30,15 +32,79 @@ void acquire_sleeplock(struct sleeplock *lk)
 	//Your code is here
 	//Comment the following line
 	//panic("acquire_sleeplock() is not implemented yet...!!");
+	cprintf("a1.\n");
+//	init_sleeplock(lk,"sleep lock initialized in acquire fun");
+
+
+
+	acquire_kspinlock(&(lk->lk)); // guard
+
+	while(lk->locked){ // mylock   |-> modify in the code here
+		cprintf("a4\n");
+		sleep(&(lk->chan),&(lk->lk));
+		cprintf("a5\n");
+	}
+
+	lk->locked=1;
+
+	lk->pid = get_cpu_proc()->env_id;
+
+	release_kspinlock(&(lk->lk)); // guard
+
+
 }
 
+//void release_sleeplock(struct sleeplock *lk)
+//{
+//	//TODO: [PROJECT'25.IM#5] KERNEL PROTECTION: #5 SLEEP LOCK - release_sleeplock
+//	//Your code is here
+//	//Comment the following line
+//	//panic("release_sleeplock() is not implemented yet...!!");
+//	cprintf("a9a\n");
+////	init_sleeplock(lk,"sleep lock initialized in release fun");
+//	cprintf("a10a\n");
+//	acquire_kspinlock(&(lk->lk));
+//	cprintf("a11\n");
+//	struct Channel new_chan=lk->chan;
+//	int que_size=queue_size(&(new_chan.queue));
+//	cprintf("a12\n");
+//	if(que_size){
+//		cprintf("a13\n");
+//		wakeup_all(&(lk->chan));
+//		cprintf("a14\n");
+//	}
+//	lk->locked=0;
+//	cprintf("a15\n");
+//	lk->pid = 0;
+//	cprintf("a15-ii\n");
+//	release_kspinlock(&(lk->lk));
+//	cprintf("a16\n");
+//}
 void release_sleeplock(struct sleeplock *lk)
 {
-	//TODO: [PROJECT'25.IM#5] KERNEL PROTECTION: #5 SLEEP LOCK - release_sleeplock
-	//Your code is here
-	//Comment the following line
-	//panic("release_sleeplock() is not implemented yet...!!");
+    acquire_kspinlock(&(lk->lk));            // guard
+    cprintf("r1\n");
+
+
+    if(queue_size(&(lk->chan.queue))){
+		wakeup_all(&(lk->chan));
+		cprintf("r3\n");
+    }
+    cprintf("r3-i\n");
+
+    lk->locked = 0;
+
+    cprintf("r1\n");
+
+    lk->pid = 0;
+
+    cprintf("r2\n");
+
+    release_kspinlock(&(lk->lk));
+
+    cprintf("r4\n");
 }
+
 
 int holding_sleeplock(struct sleeplock *lk)
 {
