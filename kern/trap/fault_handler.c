@@ -381,7 +381,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 				}
 			}
 
-			if (isPageReplacmentAlgorithmModifiedCLOCK()) {
+			if(faulted_env->page_last_WS_element != NULL)
+			{
 				struct WorkingSetElement *currentEl = LIST_FIRST(
 						&(faulted_env->page_WS_list));
 				while (currentEl != faulted_env->page_last_WS_element) {
