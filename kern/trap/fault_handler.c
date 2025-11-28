@@ -289,6 +289,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	}
 	else
 	{
+		cprintf("WORKING SET BEFORE placement:\n");
+		env_page_ws_print(faulted_env);
 		struct WorkingSetElement *victimWSElement = NULL;
 		uint32 wsSize = LIST_SIZE(&(faulted_env->page_WS_list));
 		if(wsSize < (faulted_env->page_WS_max_size))
@@ -337,6 +339,18 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 			}
 		}
 
+		if(isPageReplacmentAlgorithmModifiedCLOCK())
+		{
+			struct WorkingSetElement *currentEl = LIST_FIRST(&(faulted_env->page_WS_list));
+			while(currentEl != faulted_env->page_last_WS_element)
+			{
+				struct WorkingSetElement *tmp = LIST_NEXT(currentEl);
+				LIST_REMOVE(&(faulted_env->page_WS_list), currentEl);
+				LIST_INSERT_TAIL(&(faulted_env->page_WS_list), currentEl);
+				currentEl = tmp;
+			}
+		}
+		
 		// cprintf("Debug: Creating WS element for VA=%x\n", fault_va);
 		struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env, fault_va);
 
@@ -353,8 +367,12 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		// cprintf("last element in ws = %p\n", faulted_env->page_last_WS_element);
 		if(wsSize == faulted_env->page_WS_max_size - 1)
 		{
+			cprintf("change last element\n");
 			faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
 		}
+		cprintf("WORKING SET AFTER placement:\n");
+
+		env_page_ws_print(faulted_env);
 		}
 		else
 		{
