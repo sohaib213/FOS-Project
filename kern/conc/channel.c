@@ -34,12 +34,12 @@ void sleep(struct Channel *chan, struct kspinlock* lk)
 //	panic("sleep() is not implemented yet...!!");
 //	if(!holding_kspinlock(&ProcessQueues.qlock))
 	release_kspinlock(lk);
+	struct Env *current_proc=get_cpu_proc();
 	acquire_kspinlock(&ProcessQueues.qlock);
 
-	struct Env *current_proc=get_cpu_proc();
 
-	current_proc->env_status=ENV_BLOCKED;
 	enqueue(&(chan->queue),current_proc);
+	current_proc->env_status=ENV_BLOCKED;
 
 	sched();
 
@@ -64,13 +64,14 @@ void wakeup_one(struct Channel *chan)
 //	panic("wakeup_one() is not implemented yet...!!");
 
 	cprintf("ff8\n");
+	acquire_kspinlock(&ProcessQueues.qlock);
 	struct Env *wakedup_proc=dequeue(&(chan->queue));
 	if(!wakedup_proc) return; // new
 	cprintf("ff9\n");
 	wakedup_proc->env_status=ENV_READY;
 	cprintf("ff10\n");
 	//acquire processQueues.qlock
-	acquire_kspinlock(&ProcessQueues.qlock);
+//	acquire_kspinlock(&ProcessQueues.qlock);
 	sched_insert_ready(wakedup_proc);
 	release_kspinlock(&ProcessQueues.qlock);
 	//realse processQueues.qlock
