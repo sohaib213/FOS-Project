@@ -7,12 +7,13 @@
 #include <kern/conc/channel.h>
 #include <kern/cpu/sched_helpers.h>
 #include "kspinlock.h"
+//struct sleeplock myLock;
 
 struct sleeplock
 {
 	bool locked;       		// Is the lock held?
 	struct kspinlock lk; 	// spinlock protecting this sleep lock
-	struct Channel chan;	// channel to hold all blocked processes on this lock
+	struct Channel chan;	// channel to hold all blocked processes on this lock (for waiting)
 	// For debugging:
 	char name[NAMELEN];    	// Name of lock.
 	int pid;           		// Process holding lock

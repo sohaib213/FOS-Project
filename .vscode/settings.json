@@ -1,9 +1,0 @@
-{
-  "files.associations": {
-    "dynamic_allocator.h": "c",
-    "user_environment.h": "c",
-    "memlayout.h": "c",
-    "types.h": "c",
-    "fixed_point.h": "c"
-  }
-}

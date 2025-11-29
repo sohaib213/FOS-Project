@@ -25,8 +25,9 @@
 #include <kern/tests/test_kheap.h>
 #include <kern/tests/test_dynamic_allocator.h>
 #include <kern/tests/test_commands.h>
-#include <kern/disk/pagefile_manager.h>
-
+//#include <kern/disk/pagefile_manager.h>
+//#include <kern/conc/sleeplock.h>
+//extern struct sleeplock myLock;
 //Functions Declaration
 //======================
 void print_welcome_message();
@@ -80,6 +81,12 @@ void FOS_initialize()
 		set_uheap_strategy(UHP_PLACE_CUSTOMFIT);
 	}
 	//cprintf("* [DONE]\n");
+//	cprintf("* 2.5) SLEEPLOCK INIT...");
+//	{
+//	    init_sleeplock(&myLock, "myLock");
+//	}
+//	cprintf("[DONE]\n");
+
 
 	cprintf("* 3) DISK...");
 	{

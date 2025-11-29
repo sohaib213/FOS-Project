@@ -33,7 +33,6 @@ _main(void)
 		}
 		sys_run_env(id);
 	}
-
 	//Wait until all slaves, except the one inside C.S., are blocked
 	int numOfBlockedProcesses = 0;
 	char cmd2[64] = "__GetLockQueueSize__";

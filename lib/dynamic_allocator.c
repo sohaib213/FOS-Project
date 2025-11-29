@@ -38,6 +38,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 daEnd)
 		assert(daEnd <= daStart + DYN_ALLOC_MAX_SIZE);
 		is_initialized = 1;
 	}
+	// cprintf("initialize dynamic allocator with daStart = %p\n", daStart);
 	//==================================================================================
 	//==================================================================================
 	//TODO: [PROJECT'25.GM#1] DYNAMIC ALLOCATOR - #1 initialize_dynamic_allocator
@@ -238,6 +239,7 @@ void *alloc_block(uint32 size)
 	// RETURN NULL IF SIZE==0
 	if(size==0)return NULL;
 
+	// cprintf("needed size = %d\n", size);
 	// cprintf("Size Needed = %d\n", size);
 	// GET THE NEARST SIZE OF 2
 	uint16 nearst_size;
@@ -281,7 +283,6 @@ void *alloc_block(uint32 size)
 //		pageInfoElement->num_of_free_blocks--;
 
 		// cprintf("77\n");
-
 		return (void*)needed_block;
 
 	}
@@ -311,7 +312,7 @@ void *alloc_block(uint32 size)
 			for(int i = 0; i < PAGE_SIZE / nearst_size; i++){
 				// cprintf("i = %d\n", i * nearst_size);
 				struct BlockElement* created_block = (struct BlockElement*)((uint8*)VA + (i * nearst_size));// ADD THE OFFSET THAT REPRESTNT THE BLOCK SIZE OR NEARST_SIZE ON THE PAGE
-				LIST_INSERT_HEAD(&freeBlockLists[index_of_nearst_size],created_block);
+				LIST_INSERT_TAIL(&freeBlockLists[index_of_nearst_size],created_block);
 			}
 
 		// GET THE BLOCK AND RETURN IT

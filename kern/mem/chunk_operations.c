@@ -162,6 +162,12 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 			ptr_table = (uint32 *)(create_page_table(page_directory, currentVa));
 		}
 		uint32 index_page_table = PTX(currentVa);
+
+		if(((ptr_table[index_page_table]) & (PERM_PRESENT)) == PERM_PRESENT)
+		{
+			// cprintf("unmap\n");
+			unmap_frame(page_directory, virtual_address);
+		}
 		ptr_table[index_page_table] = ptr_table[index_page_table] | PERM_UHPAGE;
 	}
 	return;
