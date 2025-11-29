@@ -1,0 +1,6 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.toolchain.gnu.base.1882392411/PATH/delimiter=;
+environment/project/cdt.managedbuild.toolchain.gnu.base.1882392411/PATH/operation=append
+environment/project/cdt.managedbuild.toolchain.gnu.base.1882392411/PATH/value=C\:\\fos_cygwin_v2\\bin;${PATH}
+environment/project/cdt.managedbuild.toolchain.gnu.base.1882392411/append=true
+environment/project/cdt.managedbuild.toolchain.gnu.base.1882392411/appendContributed=true

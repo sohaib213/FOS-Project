@@ -690,35 +690,30 @@ int get_load_average()
 
 /*2024*/
 /********* for Priority RR Scheduler *************/
+
 void env_set_priority(int envID, int priority)
 {
-    acquire_kspinlock(&(ProcessQueues.qlock));
+	//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #1 env_set_priority
+	//Your code is here
+	//Comment the following line
+	//panic("env_set_priority() is not implemented yet...!!");
 
-    struct Env* ptr_env = NULL;
-    int result = envid2env(envID, &ptr_env, 0);
 
-    if (result < 0 || ptr_env == NULL)
-    {
-        release_kspinlock(&(ProcessQueues.qlock));
-        return;
-    }
+	acquire_kspinlock(&(ProcessQueues.qlock));
 
-    int old_priority = ptr_env->priority;
+	struct Env* ptr_env = NULL;
+	envid2env(envID, &ptr_env, 0 );
 
-    if (old_priority == priority)
-    {
-        release_kspinlock(&(ProcessQueues.qlock));
-        return;
-    }
+	assert(ptr_env != NULL);
+	int old_priority = ptr_env->priority;
+	ptr_env->priority = priority;
 
-    ptr_env->priority = priority;
+	if(ptr_env->env_status == ENV_READY)
+	{
+		update_Location_inReadyQueues(ptr_env, old_priority);
+	}
 
-    if (ptr_env->env_status == ENV_READY)
-    {
-        update_Location_inReadyQueues(ptr_env, old_priority);
-    }
-
-    release_kspinlock(&(ProcessQueues.qlock));
+	release_kspinlock(&(ProcessQueues.qlock));
 }
 
 void update_Location_inReadyQueues(struct Env* env, int old_priority)
@@ -733,6 +728,8 @@ void update_Location_inReadyQueues(struct Env* env, int old_priority)
 
 	    if (env->priority == old_priority)
 	        return;
+
+	    env->non_RunningClocks = 0;
 
 	    sched_remove_ready(env);
 

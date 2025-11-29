@@ -977,7 +977,6 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	//return a pointer to the start of the allocated space (including the GUARD PAGE)
 }
 
-
 /*2024*/
 //===========================================================
 // 6) DELETE USER KERNEL STACK (One Per Process):

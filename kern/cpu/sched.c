@@ -234,7 +234,6 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 		#if USE_KHEAP
 
 		    sched_delete_ready_queues();
-
 		    ProcessQueues.env_ready_queues = kmalloc(num_of_ready_queues * sizeof(struct Env_Queue));
 		    quantums = kmalloc(num_of_ready_queues * sizeof(uint8));
 		#endif
@@ -247,6 +246,9 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 		    }
 
 		    sched_set_starv_thresh(starvThresh);
+
+		    init_queue(&(ProcessQueues.env_new_queue));
+		    init_queue(&(ProcessQueues.env_exit_queue));
 
 	//=========================================
 	//DON'T CHANGE THESE LINES=================
@@ -336,7 +338,7 @@ struct Env* fos_scheduler_PRIRR()
 	    struct Env *cur_env = get_cpu_proc();
 
 
-	    if (cur_env != NULL)
+	    if (cur_env != NULL && cur_env->env_status == ENV_READY)
 	    {
 	        sched_insert_ready(cur_env);
 	    }
@@ -355,6 +357,8 @@ struct Env* fos_scheduler_PRIRR()
 	    if (next_env != NULL)
 	    {
 	        kclock_set_quantum(quantums[0]);
+
+	        next_env->non_RunningClocks = 0;
 	    }
 
 	    return next_env;
@@ -374,43 +378,42 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//panic("clock_interrupt_handler() is not implemented yet...!!");
 
 
-		        acquire_kspinlock(&(ProcessQueues.qlock));
+		acquire_kspinlock(&(ProcessQueues.qlock));
 
-		        for (int i = 0; i < num_of_ready_queues; i++)
+		    for (int i = 0; i < num_of_ready_queues; i++)
+		    {
+		        struct Env* ptr_env = LIST_FIRST(&(ProcessQueues.env_ready_queues[i]));
+		        while (ptr_env != NULL)
 		        {
-		            struct Env* ptr_env = NULL;
-		            struct Env* promote_env = NULL;
+		            struct Env* next_env = LIST_NEXT(ptr_env);
 
-		            LIST_FOREACH(ptr_env, &(ProcessQueues.env_ready_queues[i]))
+		            /* increase waiting clocks (non-running) */
+		            ptr_env->non_RunningClocks++;
+
+		            uint64 time_waiting = (uint64)quantums[0] * ptr_env->non_RunningClocks;
+
+		            if (time_waiting >= starv_Thresh && ptr_env->priority > 0)
 		            {
-		                ptr_env->nClocks++;
+		                int old_priority = ptr_env->priority;
+		                int new_priority = old_priority - 1; /* move to higher-priority queue (smaller index) */
 
-		                uint64 time_waiting = (uint64)quantums[0] * ptr_env->nClocks;
+		                /* remove from current queue i (should equal old_priority) */
+		                LIST_REMOVE(&(ProcessQueues.env_ready_queues[i]), ptr_env);
 
-		                if (time_waiting >= starv_Thresh && ptr_env->priority > 0)
-		                {
-		                    promote_env = ptr_env;
-		                    break;
-		                }
+		                /* update priority and insert at tail of new queue */
+		                ptr_env->priority = new_priority;
+		                LIST_INSERT_TAIL(&(ProcessQueues.env_ready_queues[new_priority]), ptr_env);
+
+		                ptr_env->non_RunningClocks = 0;
+		                /* note: don't update ptr_env here; we already saved next_env */
 		            }
 
-		            if (promote_env != NULL)
-		            {
-		                int old_priority = promote_env->priority;
-
-
-		                promote_env->priority = old_priority - 1;
-
-		                LIST_REMOVE(&(ProcessQueues.env_ready_queues[old_priority]), promote_env);
-
-		                LIST_INSERT_TAIL(&(ProcessQueues.env_ready_queues[promote_env->priority]), promote_env);
-
-		                promote_env->nClocks = 0;
-		            }
+		            ptr_env = next_env;
 		        }
-
-		        release_kspinlock(&(ProcessQueues.qlock));
 		    }
+
+		    release_kspinlock(&(ProcessQueues.qlock));
+	}
 
 
 	/********DON'T CHANGE THESE LINES***********/
