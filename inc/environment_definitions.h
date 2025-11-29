@@ -147,7 +147,11 @@ struct Env {
 	struct WorkingSetElement* page_last_WS_element;	//ptr to last inserted WS element
 	struct PageRef_List referenceStreamList;		//List of page references stream to be used for OPTIMAL replacement strategy
 	uint32 *prepagedVAs;							//Initial virtual addresses after fetching the process into RAM
-	uint32 numOfPrepagedVAs;						//Number of prepaged VAs
+	uint32 numOfPrepagedVAs;
+	struct WS_List ws_copy;
+	int is_ws_copy_initialized;
+
+	//Number of prepaged VAs
 #else
 	struct WorkingSetElement ptr_pageWorkingSet[__PWS_MAX_SIZE];
 	//uint32 page_last_WS_index;

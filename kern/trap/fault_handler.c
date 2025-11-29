@@ -280,14 +280,84 @@ int get_optimal_num_faults(struct WS_List *initWorkingSet, int maxWSSize, struct
 void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 {
 #if USE_KHEAP
-	if (isPageReplacmentAlgorithmOPTIMAL())
-	{
-		//TODO: [PROJECT'25.IM#1] FAULT HANDLER II - #1 Optimal Reference Stream
-		//Your code is here
-		//Comment the following line
-		panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
+	if (isPageReplacmentAlgorithmOPTIMAL()) {
+
+
+	    uint32 va = ROUNDDOWN(fault_va, PAGE_SIZE);
+	    uint32 *pt = NULL;
+	    cprintf("\n fault at va %d\n",va);
+	    cprintf("\n=== OPTIMAL FAULT #%d: VA = 0x%x ===\n",
+	           LIST_SIZE(&(faulted_env->referenceStreamList)) + 1, va);
+
+
+
+	    //  if page is in memory
+	    struct FrameInfo *fi = get_frame_info(faulted_env->env_page_directory, va, &pt);
+	    if (fi == NULL) {
+	        cprintf(">>> Page NOT in RAM - allocating\n");
+	        // Page not in RAM - allocate it
+	        uint32 perms = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
+	        if (alloc_page(faulted_env->env_page_directory, va, perms, 1) != 0) {
+	            env_exit();
+	            return;
+	        }
+
+	        // Read from disk
+	        int ret = pf_read_env_page(faulted_env, (void*)va);
+	        cprintf(">>> pf_read_env_page returned: %d\n", ret);
+	        if (ret == E_PAGE_NOT_EXIST_IN_PF) {
+	            pt_set_page_permissions(faulted_env->env_page_directory, va, PERM_PRESENT, 1);
+	        }
+	    }
+	    //  page is already in Active WS
+	    cprintf(">>> Checking if 0x%x is in Active WS (size=%d)...\n",
+	            va, LIST_SIZE(&(faulted_env->ws_copy)));
+
+	    struct WorkingSetElement *e;
+	    LIST_FOREACH(e, &(faulted_env->ws_copy)) {
+	        if (e->virtual_address == va) {
+	            cprintf(">>> Page 0x%x FOUND in Active WS - returning\n", va);
+	            cprintf("=== END FAULT ===\n\n");
+	            return;
+	        }
+	    }
+
+	    cprintf(">>> Page 0x%x NOT in Active WS\n", va);
+
+	    //  If WS is FULL
+	    if (LIST_SIZE(&(faulted_env->ws_copy)) == faulted_env->page_WS_max_size) {
+	        cprintf(">>> WS is FULL (size=%d, max=%d) - clearing all pages\n",
+	                LIST_SIZE(&(faulted_env->ws_copy)), faulted_env->page_WS_max_size);
+//add to reference
+	        struct WorkingSetElement *cur;
+	        LIST_FOREACH(cur, &(faulted_env->ws_copy)) {
+	            pt_set_page_permissions(faulted_env->env_page_directory,
+	                                   cur->virtual_address, PERM_PRESENT, 0);
+	        }
+	    	LIST_INIT(&(faulted_env->ws_copy));
+
+
+	    }
+
+	    struct WorkingSetElement *new_elem = kmalloc(sizeof(struct WorkingSetElement));
+	    new_elem->virtual_address = va;
+	    LIST_INSERT_TAIL(&(faulted_env->ws_copy), new_elem);
+	    cprintf(">>> Added 0x%x to Active WS, new size = %d\n",
+	            va, LIST_SIZE(&(faulted_env->ws_copy)));
+
+
+
+	    struct PageRefElement *ref = kmalloc(sizeof(struct PageRefElement));
+	    ref->virtual_address = va;
+	    LIST_INSERT_TAIL(&(faulted_env->referenceStreamList), ref);
+	    cprintf(">>> Added to ref stream, total refs = %d\n",
+	            LIST_SIZE(&(faulted_env->referenceStreamList)));
+
+
+	    cprintf("=== END FAULT ===\n\n");
+	    return;
 	}
-	else
+		else
 	{
 		struct WorkingSetElement *victimWSElement = NULL;
 		uint32 wsSize = LIST_SIZE(&(faulted_env->page_WS_list));
@@ -371,8 +441,6 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				//Your code is here
 				//Comment the following line
 				//panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
-				uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
-
 				struct WorkingSetElement* currentWSelement = LIST_FIRST(&(faulted_env->page_WS_list));
 				struct WorkingSetElement* victim=currentWSelement;
 
@@ -390,6 +458,9 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 				    	currentWSelement = LIST_NEXT(currentWSelement);
 				    }
 				}
+
+				//Replacement
+				uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
 				int pers=pt_get_page_permissions(faulted_env->env_page_directory, victim->virtual_address);
 				if(pers&PERM_MODIFIED){
 					uint32* ptr;
@@ -437,6 +508,3 @@ void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va)
 {
 	panic("this function is not required...!!");
 }
-
-
-

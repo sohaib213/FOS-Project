@@ -473,7 +473,17 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 		//	cprintf("Table working set after loading the program...\n");
 		//	env_table_ws_print(e);
 	}
-		// cprintf("FINISHED HERE \n");
+
+	LIST_INIT(&e->ws_copy);
+	   struct WorkingSetElement *wOR;
+					  			 	   	   LIST_FOREACH(wOR, &(e->page_WS_list))
+					  			 	    {
+					  			 	   		struct WorkingSetElement *newElem = (struct WorkingSetElement*)kmalloc(sizeof(struct WorkingSetElement));
+					  			 	        newElem->virtual_address =wOR->virtual_address;
+					  			 	        		LIST_INSERT_TAIL(&(e->ws_copy), newElem);
+
+					  			 	    }
+	e->is_ws_copy_initialized = 1;
 
 	return e;
 }
@@ -1069,6 +1079,7 @@ void initialize_environment(struct Env* e, uint32* ptr_user_page_directory, unsi
 		cprintf("BEFORE 1\n");
 		LIST_INIT(&(e->page_WS_list));
 		LIST_INIT(&(e->referenceStreamList));
+
 		cprintf("AFTER 1\n");
 	}
 #else
