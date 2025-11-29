@@ -24,6 +24,7 @@ void init_sleeplock(struct sleeplock *lk, char *name)
 	strcpy(lk->name, name);
 	lk->locked = 0;
 	lk->pid = 0;
+//	cprintf("name in intialize: %s\n", lk->name);
 }
 
 void acquire_sleeplock(struct sleeplock *lk)
@@ -32,26 +33,23 @@ void acquire_sleeplock(struct sleeplock *lk)
 	//Your code is here
 	//Comment the following line
 	//panic("acquire_sleeplock() is not implemented yet...!!");
-	cprintf("a1.\n");
+//	cprintf("a1.\n");
 //	init_sleeplock(lk,"sleep lock initialized in acquire fun");
-
-
-	cprintf("a2.\n");
+//	cprintf("name in aquire: %s\n", lk->name);
+//	cprintf("a2.\n");
+//	acquire_kspinlock(&ProcessQueues.qlock);
 	acquire_kspinlock(&(lk->lk)); // guard
-	cprintf("a3.\n");
+//	cprintf("a3.\n");
 	while(lk->locked){ // mylock   |-> modify in the code here
-		cprintf("a4\n");
+//		cprintf("a4\n");
 		sleep(&(lk->chan),&(lk->lk));
-		cprintf("a5\n");
+//		cprintf("a5\n");
 	}
-	cprintf("a6.\n");
+//	cprintf("a6.\n");
 	lk->locked=1;
-	cprintf("a7.\n");
-	lk->pid = get_cpu_proc()->env_id;
-	cprintf("a8.\n");
+//	cprintf("Pid = %p", lk->pid);
 	release_kspinlock(&(lk->lk)); // guard
-	cprintf("a9.\n");
-
+//	cprintf("a7.\n");
 
 }
 
@@ -83,27 +81,28 @@ void acquire_sleeplock(struct sleeplock *lk)
 //}
 void release_sleeplock(struct sleeplock *lk)
 {
+//	cprintf("r0\n");
     acquire_kspinlock(&(lk->lk));            // guard
-    cprintf("r1\n");
+//    cprintf("r1\n");
 
 
     if(queue_size(&(lk->chan.queue))){
 		wakeup_all(&(lk->chan));
-		cprintf("r3\n");
+//		cprintf("r3\n");
     }
-    cprintf("r3-i\n");
+//    cprintf("r3-i\n");
 
     lk->locked = 0;
 
-    cprintf("r1\n");
+//    cprintf("r1\n");
 
     lk->pid = 0;
 
-    cprintf("r2\n");
+//    cprintf("r2\n");
 
     release_kspinlock(&(lk->lk));
 
-    cprintf("r4\n");
+//    cprintf("r4\n");
 }
 
 
