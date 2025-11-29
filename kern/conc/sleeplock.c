@@ -36,20 +36,21 @@ void acquire_sleeplock(struct sleeplock *lk)
 //	init_sleeplock(lk,"sleep lock initialized in acquire fun");
 
 
-
+	cprintf("a2.\n");
 	acquire_kspinlock(&(lk->lk)); // guard
-
+	cprintf("a3.\n");
 	while(lk->locked){ // mylock   |-> modify in the code here
 		cprintf("a4\n");
 		sleep(&(lk->chan),&(lk->lk));
 		cprintf("a5\n");
 	}
-
+	cprintf("a6.\n");
 	lk->locked=1;
-
+	cprintf("a7.\n");
 	lk->pid = get_cpu_proc()->env_id;
-
+	cprintf("a8.\n");
 	release_kspinlock(&(lk->lk)); // guard
+	cprintf("a9.\n");
 
 
 }
