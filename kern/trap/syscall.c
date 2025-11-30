@@ -541,7 +541,7 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 	/*2023*/
 	//TODO: [PROJECT'25.IM#4] CPU SCHEDULING - #1 System Calls - Add suitable code here
 	//Your code is here
-	case sys_env_set_priority:
+	case SYS_env_set_priority:
 		env_set_priority(a1, a2);
 		return 0;
 		break;
