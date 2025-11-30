@@ -247,8 +247,8 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 
 		    sched_set_starv_thresh(starvThresh);
 
-		    init_queue(&(ProcessQueues.env_new_queue));
-		    init_queue(&(ProcessQueues.env_exit_queue));
+//		    init_kspinlock(&ProcessQueues.qlock,"Hema_Lock");
+
 
 	//=========================================
 	//DON'T CHANGE THESE LINES=================
@@ -338,8 +338,9 @@ struct Env* fos_scheduler_PRIRR()
 	    struct Env *cur_env = get_cpu_proc();
 
 
-	    if (cur_env != NULL && cur_env->env_status == ENV_READY)
+	    if (cur_env != NULL)
 	    {
+	    	cur_env->non_RunningClocks = ticks;
 	        sched_insert_ready(cur_env);
 	    }
 
@@ -357,8 +358,7 @@ struct Env* fos_scheduler_PRIRR()
 	    if (next_env != NULL)
 	    {
 	        kclock_set_quantum(quantums[0]);
-
-	        next_env->non_RunningClocks = 0;
+	        next_env->non_RunningClocks = ticks;
 	    }
 
 	    return next_env;
@@ -378,45 +378,45 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//panic("clock_interrupt_handler() is not implemented yet...!!");
 
 
-		acquire_kspinlock(&(ProcessQueues.qlock));
+		        acquire_kspinlock(&(ProcessQueues.qlock));
 
-		    for (int i = 0; i < num_of_ready_queues; i++)
-		    {
-		        struct Env* ptr_env = LIST_FIRST(&(ProcessQueues.env_ready_queues[i]));
-		        while (ptr_env != NULL)
+		        for (int i = 0; i < num_of_ready_queues; i++)
 		        {
-		            struct Env* next_env = LIST_NEXT(ptr_env);
+		            struct Env* ptr_env = NULL;
+		            struct Env* promote_env = NULL;
 
-		            /* increase waiting clocks (non-running) */
-		            ptr_env->non_RunningClocks++;
-
-		            uint64 time_waiting = (uint64)quantums[0] * ptr_env->non_RunningClocks;
-
-		            if (time_waiting >= starv_Thresh && ptr_env->priority > 0)
+		            LIST_FOREACH(ptr_env, &(ProcessQueues.env_ready_queues[i]))
 		            {
-		                int old_priority = ptr_env->priority;
-		                int new_priority = old_priority - 1; /* move to higher-priority queue (smaller index) */
 
-		                /* remove from current queue i (should equal old_priority) */
-		                LIST_REMOVE(&(ProcessQueues.env_ready_queues[i]), ptr_env);
 
-		                /* update priority and insert at tail of new queue */
-		                ptr_env->priority = new_priority;
-		                LIST_INSERT_TAIL(&(ProcessQueues.env_ready_queues[new_priority]), ptr_env);
+		                uint64 time_waiting = ticks  - ptr_env->non_RunningClocks;
 
-		                ptr_env->non_RunningClocks = 0;
-		                /* note: don't update ptr_env here; we already saved next_env */
+		                if (time_waiting >= starv_Thresh )
+		                {
+		                    promote_env = ptr_env;
+		                    break;
+		                }
 		            }
 
-		            ptr_env = next_env;
+		            if (promote_env != NULL)
+		            {
+		                int old_priority = promote_env->priority;
+
+		                if (old_priority > 0)
+		                   {
+								LIST_REMOVE(&(ProcessQueues.env_ready_queues[old_priority]), promote_env);
+								promote_env->priority = old_priority - 1;
+								LIST_INSERT_TAIL(&(ProcessQueues.env_ready_queues[promote_env->priority]), promote_env);
+								promote_env->non_RunningClocks = ticks;
+		                   }
+		            }
 		        }
+
+		        release_kspinlock(&(ProcessQueues.qlock));
 		    }
 
-		    release_kspinlock(&(ProcessQueues.qlock));
-	}
 
-
-	/********DON'T CHANGE THESE LINES***********/
+	/**********DON'T CHANGE THESE LINES**********/
 	ticks++ ;
 	struct Env* p = get_cpu_proc();
 	if (p == NULL)
@@ -434,13 +434,12 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		{
 			update_WS_time_stamps();
 		}
-		//cprintf("\n***************\nClock Handler\n***************\n") ;
+		//cprintf("\n*\nClock Handler\n*\n") ;
 		//fos_scheduler();
 		yield();
 	}
-	/*****************************************/
+	/************************************/
 }
-
 //===================================================================
 // [9] Update LRU Timestamp of WS Elements
 //	  (Automatically Called Every Quantum in case of LRU Time Approx)

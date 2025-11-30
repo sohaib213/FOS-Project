@@ -729,9 +729,9 @@ void update_Location_inReadyQueues(struct Env* env, int old_priority)
 	    if (env->priority == old_priority)
 	        return;
 
-	    env->non_RunningClocks = 0;
-
 	    sched_remove_ready(env);
+
+	    env->non_RunningClocks = ticks;
 
 	    sched_insert_ready(env);
 
