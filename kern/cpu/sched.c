@@ -247,7 +247,7 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 
 		    sched_set_starv_thresh(starvThresh);
 
-		    init_kspinlock(&ProcessQueues.qlock,"Hema_Lock");
+//		    init_kspinlock(&ProcessQueues.qlock,"Hema_Lock");
 
 
 	//=========================================
@@ -340,8 +340,8 @@ struct Env* fos_scheduler_PRIRR()
 
 	    if (cur_env != NULL)
 	    {
+	    	cur_env->non_RunningClocks = ticks;
 	        sched_insert_ready(cur_env);
-	        next_env->non_RunningClocks = ticks;
 	    }
 
 
@@ -358,7 +358,7 @@ struct Env* fos_scheduler_PRIRR()
 	    if (next_env != NULL)
 	    {
 	        kclock_set_quantum(quantums[0]);
-
+	        next_env->non_RunningClocks = ticks;
 	    }
 
 	    return next_env;
@@ -404,12 +404,9 @@ void clock_interrupt_handler(struct Trapframe* tf)
 
 		                if (old_priority > 0)
 		                   {
-								promote_env->priority = old_priority - 1;
-
 								LIST_REMOVE(&(ProcessQueues.env_ready_queues[old_priority]), promote_env);
-
+								promote_env->priority = old_priority - 1;
 								LIST_INSERT_TAIL(&(ProcessQueues.env_ready_queues[promote_env->priority]), promote_env);
-
 								promote_env->non_RunningClocks = ticks;
 		                   }
 		            }
