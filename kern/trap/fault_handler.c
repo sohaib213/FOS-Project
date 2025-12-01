@@ -590,151 +590,82 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 			//env_page_ws_print(faulted_env);
 		} else {
 			if (isPageReplacmentAlgorithmCLOCK()) {
-				//TODO: [PROJECT'25.IM#1] FAULT HANDLER II - #3 Clock Replacement
-				//Your code is here
-				//Comment the following line
-				//panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
+			    struct WorkingSetElement* victim = faulted_env->page_last_WS_element;
+			    struct WorkingSetElement* startPtr = victim;
+			    bool found = 0;
 
-				struct WorkingSetElement* victim =
-						faulted_env->page_last_WS_element;
-				struct WorkingSetElement* startPtr = victim;
+			    // CLOCK Algorithm: Search for victim with used bit = 0
+			    while (!found) {
+			        int per = pt_get_page_permissions(
+			                faulted_env->env_page_directory,
+			                victim->virtual_address);
+			        int used = per & PERM_USED;
 
-				//Normal Clock Replacement Algorithm
-				do {
-					int per = pt_get_page_permissions(
-							faulted_env->env_page_directory,
-							victim->virtual_address);
-					int used = per & PERM_USED;
+			        if (used == 0) {
+			            // Found victim with used bit = 0
+			            found = 1;
 
-					//DEBUG iteration
-					cprintf(" check va=%x used=%d\n", victim->virtual_address,
-							used ? 1 : 0);
+			            // Determine next element
+			            struct WorkingSetElement* next = LIST_NEXT(victim);
+			            if (next == NULL) {
+			                next = LIST_FIRST(&(faulted_env->page_WS_list));
+			            }
 
-					if (used == 0) {
+			            // Get frame info and update page file
+			            uint32* ptr;
+			            struct FrameInfo* frame = get_frame_info(
+			                    faulted_env->env_page_directory,
+			                    victim->virtual_address, &ptr);
+			            pf_update_env_page(faulted_env, victim->virtual_address, frame);
 
-						//DEBUG hit
-						cprintf(" HIT va=%x\n", victim->virtual_address);
+			            // Unmap old page
+			            unmap_frame(faulted_env->env_page_directory,
+			                    victim->virtual_address);
 
-						//Next element assignment
-						struct WorkingSetElement* next = LOOP_LIST_NEXT(victim);
-						if (next == NULL) {
-							next = LIST_FIRST(&(faulted_env->page_WS_list));
-						}
+			            // Allocate new page
+			            uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
+			            int allocResult = alloc_page(
+			                    faulted_env->env_page_directory, fault_va,
+			                    permission, 0);
+			            if (allocResult != 0) {
+			                env_exit();
+			                return;
+			            }
 
-						// Print full WS before replacement
-						cprintf("WS BEFORE REPLACE (lastWS va=%x): ",
-								faulted_env->page_last_WS_element ?
-										faulted_env->page_last_WS_element->virtual_address :
-										0);
+			            // Read from page file or initialize
+			            int mkd = pf_read_env_page(faulted_env, (void *) fault_va);
+			            if (mkd == E_PAGE_NOT_EXIST_IN_PF) {
+			                bool is_heap = (fault_va >= USER_HEAP_START
+			                        && fault_va < USER_HEAP_MAX);
+			                bool is_stack = (fault_va >= USTACKBOTTOM
+			                        && fault_va < USTACKTOP);
 
-						struct WorkingSetElement* cur = LIST_FIRST(
-								&(faulted_env->page_WS_list));
-						while (cur != NULL) {
-							cprintf("[%x] ", cur->virtual_address);
-							cur = LIST_NEXT(cur);
-						}
-						uint32* ptr;
-						struct FrameInfo* frame = get_frame_info(
-						faulted_env->env_page_directory,
-						victim->virtual_address, &ptr);
-						pf_update_env_page(faulted_env, victim->virtual_address,
-							frame);
-						
-						cprintf("\n");
+			                if (!is_heap && !is_stack) {
+			                    env_exit();
+			                    return;
+			                }
+			            }
 
-						// Print victim info
-						cprintf("REPLACE: victim elem=%p old_va=%x new_va=%x\n",
-								victim, victim->virtual_address, fault_va);
+			            // Update victim entry with new page
+			            victim->virtual_address = ROUNDDOWN(fault_va, PAGE_SIZE);
+			            victim->time_stamp = 0;
+			            victim->sweeps_counter = 0;
 
-						//Replacement
-						uint32 permission = PERM_PRESENT | PERM_USER
-								| PERM_WRITEABLE;
-						unmap_frame(faulted_env->env_page_directory,
-								victim->virtual_address);
-						int allocResult = alloc_page(
-								faulted_env->env_page_directory, fault_va,
-								permission, 0);
-						if (allocResult != 0) {
-							env_exit();
-							return;
-						}
-						int mkd = pf_read_env_page(faulted_env,
-								(void *) fault_va);
-						if (mkd == E_PAGE_NOT_EXIST_IN_PF) {
-							bool is_heap = (fault_va >= USER_HEAP_START
-									&& fault_va < USER_HEAP_MAX);
-							bool is_stack = (fault_va >= USTACKBOTTOM
-									&& fault_va < USTACKTOP);
+			            // Update page_last_WS_element to next element
+			            faulted_env->page_last_WS_element = next;
 
-							if (!is_heap && !is_stack) {
-								env_exit();
-								return;
-							}
-						}
+			        } else {
+			            // Clear used bit (give second chance)
+			            pt_set_page_permissions(faulted_env->env_page_directory,
+			                    victim->virtual_address, 0, PERM_USED);
 
-						//Victim replacement and pagelastWSelement assignment
-						victim->virtual_address = ROUNDDOWN(fault_va,
-								PAGE_SIZE);
-						victim->time_stamp = 0;
-						victim->sweeps_counter = 0;
-						faulted_env->page_last_WS_element = next;
-
-						// DEBUG update
-						cprintf("SET lastWS=%x\n", next->virtual_address);
-
-						// Print WS after replacement
-						cprintf("WS AFTER REPLACE (lastWS va=%x): ",
-								faulted_env->page_last_WS_element->virtual_address);
-
-						cur = LIST_FIRST(&(faulted_env->page_WS_list));
-						while (cur != NULL) {
-							cprintf("[%x] ", cur->virtual_address);
-							cur = LIST_NEXT(cur);
-						}
-						cprintf("\n");
-
-						break;
-					} else {
-						// DEBUG: show PTE before clear
-						int before = pt_get_page_permissions(
-								faulted_env->env_page_directory,
-								victim->virtual_address);
-						cprintf(
-								" ABOUT TO CLEAR USED va=%x before_perm=%x used=%d\n",
-								victim->virtual_address, before,
-								(before & PERM_USED) ? 1 : 0);
-
-						// Attempt to clear USED
-						pt_set_page_permissions(faulted_env->env_page_directory,
-								victim->virtual_address, 0, PERM_USED);
-
-						// Read back immediately
-						int after = pt_get_page_permissions(
-								faulted_env->env_page_directory,
-								victim->virtual_address);
-						cprintf(" AFTER CLEAR va=%x after_perm=%x used=%d\n",
-								victim->virtual_address, after,
-								(after & PERM_USED) ? 1 : 0);
-
-						// Extra: if not cleared, print some extra state for debugging
-						if (after & PERM_USED) {
-							cprintf(
-									" CLEAR FAILED for va=%x — check pt_set_page_permissions implementation and env pd.\n",
-									victim->virtual_address);
-							//print env pd pointer
-							cprintf(" env_page_directory=%x\n",
-									faulted_env->env_page_directory);
-						}
-
-						// advance victim as before
-						if (LOOP_LIST_NEXT(victim) == NULL) {
-							victim = LIST_FIRST(&(faulted_env->page_WS_list));
-						} else {
-							victim = LIST_NEXT(victim);
-						}
-					}
-				} while (victim != startPtr);
-
+			            // Move to next element
+			            victim = LIST_NEXT(victim);
+			            if (victim == NULL) {
+			                victim = LIST_FIRST(&(faulted_env->page_WS_list));
+			            }
+			        }
+			    }
 			} else if (isPageReplacmentAlgorithmLRU(PG_REP_LRU_TIME_APPROX)) {
 				//TODO: [PROJECT'25.IM#6] FAULT HANDLER II - #2 LRU Aging Replacement
 				//Your code is here
