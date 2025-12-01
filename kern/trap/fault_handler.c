@@ -531,6 +531,13 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 							cprintf("[%x] ", cur->virtual_address);
 							cur = LIST_NEXT(cur);
 						}
+						uint32* ptr;
+						struct FrameInfo* frame = get_frame_info(
+						faulted_env->env_page_directory,
+						victim->virtual_address, &ptr);
+						pf_update_env_page(faulted_env, victim->virtual_address,
+							frame);
+						
 						cprintf("\n");
 
 						// Print victim info
