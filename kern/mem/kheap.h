@@ -43,7 +43,6 @@ unsigned int kheap_physical_address(unsigned int virtual_address);
 int numOfKheapVACalls ;
 
 // my work
-#if KHEAP
 struct pageInfo {
   bool isBlocked;
   uint32 size, prevPageStartAddress;
@@ -51,5 +50,4 @@ struct pageInfo {
 
 bool allocFrames(uint32 start, uint32 end);
 uint32 getPagesInfoIndex(uint32 address);
-#endif
 #endif // FOS_KERN_KHEAP_H_

@@ -6,7 +6,7 @@
 #include <kern/proc/user_environment.h>
 #include <kern/mem/memory_manager.h>
 #include "../conc/kspinlock.h"
-#if KHEAP
+#if USE_KHEAP
 struct pageInfo pagesInfo[KHP_PAGES_AREA_NUMBER];
 struct kspinlock kheapLock;
 #endif
@@ -33,7 +33,7 @@ void kheap_init()
 	//==================================================================================
 	//==================================================================================
 	// memset(programmsSizes, 0, KHP_PAGES_AREA_NUMBER * sizeof(uint32));
-	#if KHEAP
+	#if USE_KHEAP
 	init_kspinlock(&kheapLock, "kheap lock");
 	#endif
 	
@@ -68,7 +68,7 @@ void* kmalloc(unsigned int size)
 {
 	//Comment the following line
 	// kpanic_into_prompt("kmalloc() is not implemented yet...!!");
-	#if KHEAP
+	#if USE_KHEAP
 	acquire_kspinlock(&kheapLock);
 
 
@@ -183,7 +183,7 @@ void* kmalloc(unsigned int size)
 //=================================
 void kfree(void* virtual_address)
 {
-	#if KHEAP
+	#if USE_KHEAP
 	//TODO: [PROJECT'25.GM#2] KERNEL HEAP - #2 kfree
 	//Your code is here
 	//Comment the following line
@@ -312,7 +312,7 @@ void kfree(void* virtual_address)
 //=================================
 unsigned int kheap_virtual_address(unsigned int physical_address)
 {
-	#if KHEAP
+	#if USE_KHEAP
 	//TODO: [PROJECT'25.GM#2] KERNEL HEAP - #3 kheap_virtual_address
 	//Your code is here
 	//Comment the following line
@@ -385,7 +385,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//Your code is here
 	//Comment the following line
 	// panic("krealloc() is not implemented yet...!!");
-	#if KHEAP
+	#if USE_KHEAP
 
 	acquire_kspinlock(&kheapLock);
 	

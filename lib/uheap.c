@@ -266,7 +266,7 @@ void free(void* virtual_address)
 	else{
 		panic("kfree() error: invalid virtual address!");
 	}
-		#endif USE_KHEAP
+	#endif
 }
 
 //=================================
