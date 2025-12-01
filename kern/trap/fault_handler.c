@@ -321,7 +321,100 @@ int get_optimal_num_faults(struct WS_List *initWorkingSet, int maxWSSize,
 	//TODO: [PROJECT'25.IM#1] FAULT HANDLER II - #2 get_optimal_num_faults
 	//Your code is here
 	//Comment the following line
-	panic("get_optimal_num_faults() is not implemented yet...!!");
+	//panic("get_optimal_num_faults() is not implemented yet...!!");
+
+	    int num_faults = 0;
+
+	    struct WS_List Active_ws;
+	    LIST_INIT(&Active_ws);
+
+	    struct WorkingSetElement *ele;
+	    LIST_FOREACH(ele, initWorkingSet) {
+	        struct WorkingSetElement *newElem =
+	            (struct WorkingSetElement*)kmalloc(sizeof(struct WorkingSetElement));
+	        newElem->virtual_address = ele->virtual_address;
+	        LIST_INSERT_TAIL(&Active_ws, newElem);
+	    }
+
+
+	    int WSsSize = LIST_SIZE(&Active_ws);
+
+
+	    struct PageRefElement *ref;
+	    LIST_FOREACH(ref, pageReferences) {
+	        uint32 refVA = ref->virtual_address;
+	        bool page_inWS = 0;
+
+
+	        struct WorkingSetElement *ws_eleem;
+	        LIST_FOREACH(ws_eleem, &Active_ws) {
+	            if (ws_eleem->virtual_address == refVA) {
+	            	page_inWS = 1;
+	                break;
+	            }
+	        }
+
+
+	        if (!page_inWS) {
+	            num_faults++;
+
+	            if (WSsSize >= maxWSSize) {
+
+	                struct WorkingSetElement *victim = NULL;
+	                int max_distance = -1;
+
+	                // For each page in current WS, find when it will be used next
+	                LIST_FOREACH(ws_eleem, &Active_ws) {
+	                    int distance = 0;
+	                    bool future = 0;
+
+
+	                    struct PageRefElement *futureRef = LIST_NEXT(ref);
+	                    while (futureRef != NULL) {
+	                        distance++;
+	                        if (futureRef->virtual_address == ws_eleem->virtual_address) {
+	                        	future = 1;
+	                            break;
+	                        }
+	                        futureRef = LIST_NEXT(futureRef);
+	                    }
+
+
+	                    if (!future) {
+	                        victim = ws_eleem;
+	                        break;
+	                    }
+
+	                    if (distance > max_distance) {
+	                    	max_distance = distance;
+	                        victim = ws_eleem;
+	                    }
+	                }
+
+
+	                if (victim != NULL) {
+	                    LIST_REMOVE(&Active_ws, victim);
+	                    kfree(victim);
+	                    WSsSize--;
+	                }
+	            }
+
+	            struct WorkingSetElement *new_page =
+	                (struct WorkingSetElement*)kmalloc(sizeof(struct WorkingSetElement));
+	            new_page->virtual_address = refVA;
+	            LIST_INSERT_TAIL(&Active_ws, new_page);
+	            WSsSize++;
+	        }
+	    }
+
+	    // Clean
+	    while (!LIST_EMPTY(&Active_ws)) {
+	        struct WorkingSetElement *elem = LIST_FIRST(&Active_ws);
+	        LIST_REMOVE(&Active_ws, elem);
+	        kfree(elem);
+	    }
+
+	    return num_faults;
 }
 
 void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
