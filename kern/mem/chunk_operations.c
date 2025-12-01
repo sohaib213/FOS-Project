@@ -188,6 +188,8 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	//Your code is here
 	//Comment the following line
 	// panic("free_user_mem() is not implemented yet...!!");
+	#if USE_KHEAP
+
 	uint32 *page_directory = e->env_page_directory, *ptr_table ;
 
 	for(uint32 currentVa = virtual_address; currentVa < virtual_address + size; currentVa += PAGE_SIZE)
@@ -221,6 +223,8 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 		// delete page from disk
 		pf_remove_env_page(e, currentVa);
 	}
+	#endif
+
 }
 
 //=====================================

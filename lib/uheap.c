@@ -284,7 +284,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 	//Your code is here
 	//Comment the following line
 	//panic("smalloc() is not implemented yet...!!");
-
+	#if USE_KHEAP
 
 	size = ROUNDUP(size, PAGE_SIZE);
 	uint32 maxSize = 0, maxSizeAddress;
@@ -348,6 +348,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 	if(id != E_NO_SHARE && id != E_SHARED_MEM_EXISTS){
 		return (void *)resultAddress;
 	}
+	#endif
 
 	return NULL;
 }
@@ -367,6 +368,8 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	//Comment the following line
 	//panic("sget() is not implemented yet...!!");
 	//panic("dah b2a 48aiiiiiiiiiiiiiiiiiiiii");
+	#if USE_KHEAP
+
 	int size = sys_size_of_shared_object(ownerEnvID,sharedVarName);
 	if(size == E_SHARED_MEM_NOT_EXISTS || size == 0){
 		return NULL;
@@ -432,6 +435,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	if(id != E_SHARED_MEM_NOT_EXISTS){
 		return (void *)resultAddress;
 	}
+	#endif
 
 	return NULL;
 }

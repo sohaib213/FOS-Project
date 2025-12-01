@@ -473,6 +473,7 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 		//	cprintf("Table working set after loading the program...\n");
 		//	env_table_ws_print(e);
 	}
+	#if USE_KHEAP
 
 	LIST_INIT(&e->ws_copy);
 	   struct WorkingSetElement *wOR;
@@ -484,6 +485,7 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 
 					  			 	    }
 	e->is_ws_copy_initialized = 1;
+	#endif
 
 	return e;
 }

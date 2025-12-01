@@ -154,6 +154,8 @@ struct Share* alloc_share(int32 ownerID, char* shareName, uint32 size, uint8 isW
 //=========================
 int create_shared_object(int32 ownerID, char* shareName, uint32 size, uint8 isWritable, void* virtual_address)
 {
+	#if USE_KHEAP
+
 	//TODO: [PROJECT'25.IM#3] SHARED MEMORY - #3 create_shared_object
 	//Your code is here
 	//Comment the following line
@@ -222,6 +224,7 @@ int create_shared_object(int32 ownerID, char* shareName, uint32 size, uint8 isWr
 			release_kspinlock(&AllShares.shareslock);
 
 	return shared_obj->ID;
+	#endif
 }
 
 
@@ -230,6 +233,7 @@ int create_shared_object(int32 ownerID, char* shareName, uint32 size, uint8 isWr
 //======================
 int get_shared_object(int32 ownerID, char* shareName, void* virtual_address)
 {
+	#if USE_KHEAP
 	//TODO: [PROJECT'25.IM#3] SHARED MEMORY - #5 get_shared_object
 	//Your code is here
 	//Comment the following line
@@ -287,6 +291,7 @@ int get_shared_object(int32 ownerID, char* shareName, void* virtual_address)
 
 		
 	return shared_obj->ID;
+	#endif
 }
 //==================================================================================//
 //============================== BONUS FUNCTIONS ===================================//
