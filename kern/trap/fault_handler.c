@@ -590,55 +590,70 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 			//env_page_ws_print(faulted_env);
 		} else {
 			if (isPageReplacmentAlgorithmCLOCK()) {
+
+				//TODO: [PROJECT'25.IM#1] FAULT HANDLER II - #3 Clock Replacement
+								//Your code is here
+								//Comment the following line
+								//panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
+
+				uint32 va = ROUNDDOWN(fault_va, PAGE_SIZE);
+
+
+
 			    struct WorkingSetElement* victim = faulted_env->page_last_WS_element;
 			    struct WorkingSetElement* startPtr = victim;
 			    bool found = 0;
 
-			    // CLOCK Algorithm: Search for victim with used bit = 0
 			    while (!found) {
 			        int per = pt_get_page_permissions(
 			                faulted_env->env_page_directory,
 			                victim->virtual_address);
 			        int used = per & PERM_USED;
+			        int modified = per & PERM_MODIFIED;
 
 			        if (used == 0) {
-			            // Found victim with used bit = 0
+
 			            found = 1;
 
-			            // Determine next element
+
 			            struct WorkingSetElement* next = LIST_NEXT(victim);
 			            if (next == NULL) {
 			                next = LIST_FIRST(&(faulted_env->page_WS_list));
 			            }
 
-			            // Get frame info and update page file
+			            // update page file
+
+
 			            uint32* ptr;
 			            struct FrameInfo* frame = get_frame_info(
 			                    faulted_env->env_page_directory,
 			                    victim->virtual_address, &ptr);
+			            if (modified) {
 			            pf_update_env_page(faulted_env, victim->virtual_address, frame);
 
-			            // Unmap old page
+			            }
+
+
 			            unmap_frame(faulted_env->env_page_directory,
 			                    victim->virtual_address);
 
 			            // Allocate new page
 			            uint32 permission = PERM_PRESENT | PERM_USER | PERM_WRITEABLE;
 			            int allocResult = alloc_page(
-			                    faulted_env->env_page_directory, fault_va,
+			                    faulted_env->env_page_directory, va,
 			                    permission, 0);
 			            if (allocResult != 0) {
 			                env_exit();
 			                return;
 			            }
 
-			            // Read from page file or initialize
-			            int mkd = pf_read_env_page(faulted_env, (void *) fault_va);
+
+			            int mkd = pf_read_env_page(faulted_env, (void *) va);
 			            if (mkd == E_PAGE_NOT_EXIST_IN_PF) {
-			                bool is_heap = (fault_va >= USER_HEAP_START
-			                        && fault_va < USER_HEAP_MAX);
-			                bool is_stack = (fault_va >= USTACKBOTTOM
-			                        && fault_va < USTACKTOP);
+			                bool is_heap = (va >= USER_HEAP_START
+			                        &&va < USER_HEAP_MAX);
+			                bool is_stack = (va >= USTACKBOTTOM
+			                        && va < USTACKTOP);
 
 			                if (!is_heap && !is_stack) {
 			                    env_exit();
@@ -646,20 +661,20 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 			                }
 			            }
 
-			            // Update victim entry with new page
-			            victim->virtual_address = ROUNDDOWN(fault_va, PAGE_SIZE);
+
+			            victim->virtual_address = ROUNDDOWN(va, PAGE_SIZE);
 			            victim->time_stamp = 0;
 			            victim->sweeps_counter = 0;
 
-			            // Update page_last_WS_element to next element
+
 			            faulted_env->page_last_WS_element = next;
 
 			        } else {
-			            // Clear used bit (give second chance)
+
 			            pt_set_page_permissions(faulted_env->env_page_directory,
 			                    victim->virtual_address, 0, PERM_USED);
 
-			            // Move to next element
+
 			            victim = LIST_NEXT(victim);
 			            if (victim == NULL) {
 			                victim = LIST_FIRST(&(faulted_env->page_WS_list));
