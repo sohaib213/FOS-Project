@@ -333,8 +333,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 		// 	panic("page_fault_handler().REPLACEMENT is not implemented yet...!!");
 		uint32 va = ROUNDDOWN(fault_va, PAGE_SIZE);
 		uint32 *pt = NULL;
-		cprintf("\n fault at va %d\n",va);
-		cprintf("\n=== OPTIMAL FAULT #%d: VA = 0x%x ===\n",
+		cprintf("\n fault at va %p\n",va);
+		cprintf("\n=== OPTIMAL FAULT #%d: VA = %p ===\n",
 		LIST_SIZE(&(faulted_env->referenceStreamList)) + 1, va);
 
 
@@ -354,42 +354,49 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 			int ret = pf_read_env_page(faulted_env, (void*)va);
 			cprintf(">>> pf_read_env_page returned: %d\n", ret);
 			if (ret == E_PAGE_NOT_EXIST_IN_PF) {
-					pt_set_page_permissions(faulted_env->env_page_directory, va, PERM_PRESENT, 1);
+					pt_set_page_permissions(faulted_env->env_page_directory, va, PERM_PRESENT, 0);
 			}
 		}
 		//  page is already in Active WS
 		cprintf(">>> Checking if 0x%x is in Active WS (size=%d)...\n",
 						va, LIST_SIZE(&(faulted_env->ws_copy)));
 
+		bool isInWorkingSet = 0;
 		struct WorkingSetElement *e;
 		LIST_FOREACH(e, &(faulted_env->ws_copy)) {
 				if (e->virtual_address == va) {
 						cprintf(">>> Page 0x%x FOUND in Active WS - returning\n", va);
 						cprintf("=== END FAULT ===\n\n");
-						return;
+						isInWorkingSet = 1;
+						break;
 				}
 		}
-
-		cprintf(">>> Page 0x%x NOT in Active WS\n", va);
-
-		//  If WS is FULL
-		if (LIST_SIZE(&(faulted_env->ws_copy)) == faulted_env->page_WS_max_size) {
-				cprintf(">>> WS is FULL (size=%d, max=%d) - clearing all pages\n",
-								LIST_SIZE(&(faulted_env->ws_copy)), faulted_env->page_WS_max_size);
-			//add to reference
-			struct WorkingSetElement *cur;
-			LIST_FOREACH(cur, &(faulted_env->ws_copy)) {
-					pt_set_page_permissions(faulted_env->env_page_directory,
-																	cur->virtual_address, PERM_PRESENT, 0);
+		if(!isInWorkingSet)
+		{
+			cprintf(">>> Page 0x%x NOT in Active WS\n", va);
+	
+			//  If WS is FULL
+			if (LIST_SIZE(&(faulted_env->ws_copy)) == faulted_env->page_WS_max_size) {
+					cprintf(">>> WS is FULL (size=%d, max=%d) - clearing all pages\n",
+									LIST_SIZE(&(faulted_env->ws_copy)), faulted_env->page_WS_max_size);
+				//add to reference
+				struct WorkingSetElement *cur;
+				LIST_FOREACH(cur, &(faulted_env->ws_copy)) {
+						pt_set_page_permissions(faulted_env->env_page_directory,
+																		cur->virtual_address, 0, PERM_PRESENT);
+						// uint32* ptr_page_table ;
+						// int ret = get_page_table(faulted_env->env_page_directory, cur->virtual_address, &ptr_page_table);
+						// cprintf("PTE after modified of va = %p is %p \n", cur->virtual_address, ptr_page_table[PTX(cur->virtual_address)]);
+				}
+				LIST_INIT(&(faulted_env->ws_copy));
 			}
-			LIST_INIT(&(faulted_env->ws_copy));
+			struct WorkingSetElement *new_elem = kmalloc(sizeof(struct WorkingSetElement));
+			new_elem->virtual_address = va;
+			LIST_INSERT_TAIL(&(faulted_env->ws_copy), new_elem);
+			cprintf(">>> Added 0x%x to Active WS, new size = %d\n",
+							va, LIST_SIZE(&(faulted_env->ws_copy)));
 		}
 
-		struct WorkingSetElement *new_elem = kmalloc(sizeof(struct WorkingSetElement));
-		new_elem->virtual_address = va;
-		LIST_INSERT_TAIL(&(faulted_env->ws_copy), new_elem);
-		cprintf(">>> Added 0x%x to Active WS, new size = %d\n",
-						va, LIST_SIZE(&(faulted_env->ws_copy)));
 
 		struct PageRefElement *ref = kmalloc(sizeof(struct PageRefElement));
 		ref->virtual_address = va;
@@ -397,7 +404,9 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 		cprintf(">>> Added to ref stream, total refs = %d\n",
 						LIST_SIZE(&(faulted_env->referenceStreamList)));
 
+		pt_set_page_permissions(faulted_env->env_page_directory, va, PERM_PRESENT, 0);
 
+		cprintf("PTE BEFORE LEAVE = %p\n", pt_get_page_permissions(faulted_env->env_page_directory, va));
 		cprintf("=== END FAULT ===\n\n");
 		return;
 	}
