@@ -108,7 +108,7 @@ struct Share* alloc_share(int32 ownerID, char* shareName, uint32 size, uint8 isW
 	//Your code is here
 	//Comment the following line
 	//panic("alloc_share() is not implemented yet...!!");
-
+	#if USE_KHEAP
 	struct Share *shared_obj_check = find_share(ownerID,shareName);
 	if(shared_obj_check != NULL){
 		return NULL; 
@@ -144,7 +144,7 @@ struct Share* alloc_share(int32 ownerID, char* shareName, uint32 size, uint8 isW
 	for(int j = 0; j < pages; ++j){
 		shared_obj->framesStorage[j] = NULL;
 	}
-	
+	#endif
 	return shared_obj;
 }
 
