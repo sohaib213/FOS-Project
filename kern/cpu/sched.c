@@ -446,6 +446,7 @@ void clock_interrupt_handler(struct Trapframe* tf)
 //===================================================================
 void update_WS_time_stamps()
 {
+	#if USE_KHEAP
 	//TODO: [PROJECT'25.IM#6] FAULT HANDLER II - #1 update_WS_time_stamps
 	//Your code is here
 	//Comment the following line
@@ -465,4 +466,5 @@ void update_WS_time_stamps()
 		pt_set_page_permissions(env->env_page_directory, WSelement->virtual_address, 0, PERM_USED);
 		WSelement = LIST_NEXT(WSelement);
 	}
+	#endif
 }

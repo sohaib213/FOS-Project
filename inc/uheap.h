@@ -26,11 +26,11 @@ void* sget(int32 ownerEnvID, char *sharedVarName);
 void free(void* virtual_address);
 void sfree(void* virtual_address);
 void *realloc(void *virtual_address, uint32 new_size);
-
+#if USE_KHEAP
 uint32 getPagesInfoIndex(uint32 address);
 struct pageUserHeapInfo {
   bool isBlocked;
   uint32 size, prevPageStartAddress;
 };
-
+#endif
 #endif

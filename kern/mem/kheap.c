@@ -6,10 +6,10 @@
 #include <kern/proc/user_environment.h>
 #include <kern/mem/memory_manager.h>
 #include "../conc/kspinlock.h"
-
+#if KHEAP
 struct pageInfo pagesInfo[KHP_PAGES_AREA_NUMBER];
 struct kspinlock kheapLock;
-
+#endif
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -33,7 +33,10 @@ void kheap_init()
 	//==================================================================================
 	//==================================================================================
 	// memset(programmsSizes, 0, KHP_PAGES_AREA_NUMBER * sizeof(uint32));
+	#if KHEAP
 	init_kspinlock(&kheapLock, "kheap lock");
+	#endif
+	
 }
 
 //==============================================
@@ -65,7 +68,7 @@ void* kmalloc(unsigned int size)
 {
 	//Comment the following line
 	// kpanic_into_prompt("kmalloc() is not implemented yet...!!");
-
+	#if KHEAP
 	acquire_kspinlock(&kheapLock);
 
 
@@ -169,7 +172,10 @@ void* kmalloc(unsigned int size)
 	release_kspinlock(&kheapLock);
 	
 	return NULL;
+	#endif
 	//TODO: [PROJECT'25.BONUS#3] FAST PAGE ALLOCATOR
+	return NULL;
+
 }
 
 //=================================
@@ -177,6 +183,7 @@ void* kmalloc(unsigned int size)
 //=================================
 void kfree(void* virtual_address)
 {
+	#if KHEAP
 	//TODO: [PROJECT'25.GM#2] KERNEL HEAP - #2 kfree
 	//Your code is here
 	//Comment the following line
@@ -297,6 +304,7 @@ void kfree(void* virtual_address)
 	// If we reach here, the address is invalid
 	release_kspinlock(&kheapLock);
 	return;
+	#endif
 }
 
 //=================================
@@ -304,6 +312,7 @@ void kfree(void* virtual_address)
 //=================================
 unsigned int kheap_virtual_address(unsigned int physical_address)
 {
+	#if KHEAP
 	//TODO: [PROJECT'25.GM#2] KERNEL HEAP - #3 kheap_virtual_address
 	//Your code is here
 	//Comment the following line
@@ -319,6 +328,9 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 		return 0;
 	return ptr_fi->virtual_address | offset;
 	/*EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED */
+	#endif
+	panic("kheap_virtual_address() is not working when USE_HEAP = 0");
+
 }
 
 //=================================
@@ -368,13 +380,12 @@ extern __inline__ uint32 get_block_size(void *va);
 
 void *krealloc(void *virtual_address, uint32 new_size)
 {
-	// cprintf("kheapPageAllocBreak from krealloc = %p \n", kheapPageAllocBreak);
 
 	//TODO: [PROJECT'25.BONUS#2] KERNEL REALLOC - krealloc
 	//Your code is here
 	//Comment the following line
 	// panic("krealloc() is not implemented yet...!!");
-
+	#if KHEAP
 
 	acquire_kspinlock(&kheapLock);
 	
@@ -687,6 +698,9 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	release_kspinlock(&kheapLock);
 		// cprintf("Here 8\n");
 	return NULL;
+	#endif
+	return NULL;
+
 }
 
 bool allocFrames(uint32 start, uint32 end){

@@ -45,14 +45,15 @@ void return_page(void* va)
 //==================================================================================//
 //============================ REQUIRED FUNCTIONS ==================================//
 //==================================================================================//
-
+#if USE_KHEAP
 struct pageUserHeapInfo pagesInfo[UHP_PAGES_AREA_NUMBER];
-
+#endif
 //=================================
 // [1] ALLOCATE SPACE IN USER HEAP:
 //=================================
 void* malloc(uint32 size)
 {
+
 	// cprintf("size = %d\n", size);
 	//==============================================================
 	//DON'T CHANGE THIS CODE========================================
@@ -63,7 +64,7 @@ void* malloc(uint32 size)
 	//Your code is here
 	//Comment the following line
 	// panic("malloc() is not implemented yet...!!");
-
+	#if USE_KHEAP
 	if(ROUNDUP(size, PAGE_SIZE) > (USER_HEAP_MAX - uheapPageAllocStart))
 	{
 		return NULL;
@@ -145,7 +146,7 @@ void* malloc(uint32 size)
 		sys_allocate_user_mem(resultAddress, size);
 		return (void*)resultAddress;
 	}
-
+	#endif
 	return NULL;
 }
 
@@ -155,6 +156,7 @@ void* malloc(uint32 size)
 void free(void* virtual_address)
 {
 	//TODO: [PROJECT'25.IM#2] USER HEAP - #3 free
+	#if USE_KHEAP
 	//Your code is here
 	//Comment the following line
 	// panic("free() is not implemented yet...!!");
@@ -264,6 +266,7 @@ void free(void* virtual_address)
 	else{
 		panic("kfree() error: invalid virtual address!");
 	}
+		#endif USE_KHEAP
 }
 
 //=================================
