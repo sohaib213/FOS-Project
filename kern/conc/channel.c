@@ -63,19 +63,19 @@ void wakeup_one(struct Channel *chan)
 	//Comment the following line
 //	panic("wakeup_one() is not implemented yet...!!");
 
-	cprintf("ff8.\n");
+	// cprintf("ff8.\n");
 	struct Env *wakedup_proc=dequeue(&(chan->queue));
 	if(!wakedup_proc) return; // new
-	cprintf("ff9.\n");
+	// cprintf("ff9.\n");
 	wakedup_proc->env_status=ENV_READY;
-	cprintf("ff10.\n");
+	// cprintf("ff10.\n");
 	//acquire processQueues.qlock
 //	acquire_kspinlock(&ProcessQueues.qlock);
 	acquire_kspinlock(&ProcessQueues.qlock);
 	sched_insert_ready(wakedup_proc);
 	release_kspinlock(&ProcessQueues.qlock);
 	//realse processQueues.qlock
-	cprintf("ff11.\n");
+	// cprintf("ff11.\n");
 
 
 }

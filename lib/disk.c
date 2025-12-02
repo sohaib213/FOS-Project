@@ -20,7 +20,7 @@ static int diskno = 0;
 void disk_interrupt_handler(struct Trapframe *tf)
 {
 	int r;
-	cprintf("\n>>>>>>>> DISK INTERRUPT <<<<<<<<<\n");
+	// cprintf("\n>>>>>>>> DISK INTERRUPT <<<<<<<<<\n");
 	if (((r = inb(0x1F7)) & (IDE_BSY|IDE_DRDY)) != IDE_DRDY)
 	{
 		//cprintf("NOT READY\n");

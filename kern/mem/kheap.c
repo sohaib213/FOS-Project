@@ -491,12 +491,12 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				else
 				{
 
-					cprintf("before address = %p\n", oldProgramm->prevPageStartAddress);
-					cprintf("before index = %d\n", getPagesInfoIndex(oldProgramm->prevPageStartAddress));
-					cprintf("va = %p\n", va);
+					// cprintf("before address = %p\n", oldProgramm->prevPageStartAddress);
+					// cprintf("before index = %d\n", getPagesInfoIndex(oldProgramm->prevPageStartAddress));
+					// cprintf("va = %p\n", va);
 
-					cprintf("before size = %d\n", before->size);
-					cprintf("current size = %d\n", oldProgramm->size);
+					// cprintf("before size = %d\n", before->size);
+					// cprintf("current size = %d\n", oldProgramm->size);
 					sizeNeeded -= before->size;
 					// merge the before node to current one
 					beforeCondition = 2;
