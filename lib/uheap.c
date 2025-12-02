@@ -79,10 +79,10 @@ void* malloc(uint32 size)
 		// cprintf("va from alloc block = %p\n", (uint32)a);
 		if(a == NULL)
 			return NULL;
-		else if ((uint32) a == ROUNDDOWN((uint32)a, PAGE_SIZE))
-		{
-			sys_allocate_user_mem((uint32) a, size);
-		}
+		// else if ((uint32) a == ROUNDDOWN((uint32)a, PAGE_SIZE))
+		// {
+			// sys_allocate_user_mem((uint32) a, size);
+		// }
 		return (void *)a;
 	}else{
 		size = ROUNDUP(size, PAGE_SIZE);
