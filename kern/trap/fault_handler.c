@@ -470,14 +470,14 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 	
 			//  If WS is FULL
 			if (LIST_SIZE(&(faulted_env->ws_copy)) == faulted_env->page_WS_max_size) {
-				//add to reference
-				struct WorkingSetElement *cur;
-				LIST_FOREACH(cur, &(faulted_env->ws_copy)) {
-						pt_set_page_permissions(faulted_env->env_page_directory,
-																		cur->virtual_address, 0, PERM_PRESENT);
-						// uint32* ptr_page_table ;
-						// int ret = get_page_table(faulted_env->env_page_directory, cur->virtual_address, &ptr_page_table);
-						// cprintf("PTE after modified of va = %p is %p \n", cur->virtual_address, ptr_page_table[PTX(cur->virtual_address)]);
+
+				while (!LIST_EMPTY(&(faulted_env->ws_copy))) {
+					
+					struct WorkingSetElement *itrty = LIST_FIRST(&(faulted_env->ws_copy));
+					pt_set_page_permissions(faulted_env->env_page_directory,
+																	itrty->virtual_address, 0, PERM_PRESENT);
+					LIST_REMOVE(&(faulted_env->ws_copy), itrty );
+					kfree(itrty );
 				}
 				LIST_INIT(&(faulted_env->ws_copy));
 			}
