@@ -442,7 +442,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 		uint32 ifFOUND = 2;
 		bool victim_in_set = 0;
 		struct WorkingSetElement *e;
-		LIST_FOREACH(e, &(faulted_env->el_copy_set_ws))
+		LIST_FOREACH(e, &(faulted_env->ws_copy))
 		{
 			if (e->virtual_address == VERaddress) {
 				victim_in_set = 1;
@@ -451,27 +451,27 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va) {
 			ifFOUND = 1;
 		}
 		if (!victim_in_set) {
-			if ((LIST_SIZE(&(faulted_env->el_copy_set_ws))
+			if ((LIST_SIZE(&(faulted_env->ws_copy))
 					== faulted_env->page_WS_max_size) && mariam != 1) {
 
 				ifFOUND = 1;
-				while (!LIST_EMPTY(&(faulted_env->el_copy_set_ws))) {
+				while (!LIST_EMPTY(&(faulted_env->ws_copy))) {
 
 					struct WorkingSetElement *itrty = LIST_FIRST(
-							&(faulted_env->el_copy_set_ws));
+							&(faulted_env->ws_copy));
 					pt_set_page_permissions(faulted_env->env_page_directory,
 							itrty->virtual_address, 0, PERM_PRESENT);
-					LIST_REMOVE(&(faulted_env->el_copy_set_ws), itrty);
+					LIST_REMOVE(&(faulted_env->ws_copy), itrty);
 					ifFOUND = 0;
 					kfree(itrty);
 				}
-				LIST_INIT(&(faulted_env->el_copy_set_ws));
+				LIST_INIT(&(faulted_env->ws_copy));
 			}
 
 			struct WorkingSetElement *new_iteme = kmalloc(
 					sizeof(struct WorkingSetElement));
 			new_iteme->virtual_address = VERaddress;
-			LIST_INSERT_TAIL(&(faulted_env->el_copy_set_ws), new_iteme);
+			LIST_INSERT_TAIL(&(faulted_env->ws_copy), new_iteme);
 		}
 		bool inRefrence = 1;
 		struct PageRefElement *refrenceer = kmalloc(

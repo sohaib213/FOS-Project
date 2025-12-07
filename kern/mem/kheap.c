@@ -93,14 +93,12 @@ void* kmalloc(unsigned int size)
 		unsigned int maxSize = 0, maxSizeAddress;
 		unsigned int resultAddress = 0, lastAddress = 0;
 
-		int i = 0;
 		// cprintf("Before \n");
 		// cprintf("kheapPageAllocBreak = %p \n", kheapPageAllocBreak);
 
 		for(uint32 currentAddress = kheapPageAllocStart; currentAddress < kheapPageAllocBreak;)
 		{
 			// cprintf("currentAddress = %p\n", currentAddress);
-			i++;
 			struct pageInfo *currentPageInfo = &pagesInfo[getPagesInfoIndex(currentAddress)];
 			if (!currentPageInfo->isBlocked) {
 				if(size == currentPageInfo->size) // CUSTOM FIT FOUND
